@@ -811,16 +811,16 @@ Scope: Mixing Vats & Handwash Stations
         if (recallChart) return;
 
         const purpleGrad = ctx.getContext('2d').createLinearGradient(0, 0, 0, 200);
-        purpleGrad.addColorStop(0, 'rgba(159, 122, 234, 0.4)');
-        purpleGrad.addColorStop(1, 'rgba(159, 122, 234, 0.0)');
+        purpleGrad.addColorStop(0, 'rgba(139, 92, 246, 0.25)');
+        purpleGrad.addColorStop(1, 'rgba(139, 92, 246, 0.0)');
 
         const orangeGrad = ctx.getContext('2d').createLinearGradient(0, 0, 0, 200);
-        orangeGrad.addColorStop(0, 'rgba(221, 107, 32, 0.4)');
-        orangeGrad.addColorStop(1, 'rgba(221, 107, 32, 0.0)');
+        orangeGrad.addColorStop(0, 'rgba(245, 158, 11, 0.25)');
+        orangeGrad.addColorStop(1, 'rgba(245, 158, 11, 0.0)');
 
         const blueGrad = ctx.getContext('2d').createLinearGradient(0, 0, 0, 200);
-        blueGrad.addColorStop(0, 'rgba(49, 130, 206, 0.4)');
-        blueGrad.addColorStop(1, 'rgba(49, 130, 206, 0.0)');
+        blueGrad.addColorStop(0, 'rgba(59, 130, 246, 0.25)');
+        blueGrad.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
 
         recallChart = new Chart(ctx, {
             type: 'line',
@@ -830,7 +830,7 @@ Scope: Mixing Vats & Handwash Stations
                     {
                         label: 'E. coli Risk Index',
                         data: [15, 22, 19, 45, 68, 78],
-                        borderColor: '#9F7AEA',
+                        borderColor: '#8B5CF6',
                         backgroundColor: purpleGrad,
                         fill: true,
                         tension: 0.4,
@@ -839,7 +839,7 @@ Scope: Mixing Vats & Handwash Stations
                     {
                         label: 'Salmonella Outbreaks',
                         data: [28, 30, 15, 24, 38, 42],
-                        borderColor: '#DD6B20',
+                        borderColor: '#F59E0B',
                         backgroundColor: orangeGrad,
                         fill: true,
                         tension: 0.4,
@@ -848,7 +848,7 @@ Scope: Mixing Vats & Handwash Stations
                     {
                         label: 'Listeria Contamination',
                         data: [52, 48, 32, 20, 12, 8],
-                        borderColor: '#3182CE',
+                        borderColor: '#3B82F6',
                         backgroundColor: blueGrad,
                         fill: true,
                         tension: 0.4,
@@ -862,22 +862,22 @@ Scope: Mixing Vats & Handwash Stations
                 plugins: {
                     legend: {
                         labels: {
-                            color: '#9CA3AF',
+                            color: '#475569',
                             font: { family: 'Inter', size: 10 }
                         }
                     }
                 },
                 scales: {
                     x: {
-                        grid: { color: 'rgba(255,255,255,0.03)' },
-                        ticks: { color: '#9CA3AF', font: { size: 9 } }
+                        grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                        ticks: { color: '#6B7280', font: { size: 9 } }
                     },
                     y: {
                         min: 0,
                         max: 100,
-                        grid: { color: 'rgba(255,255,255,0.03)' },
+                        grid: { color: 'rgba(0, 0, 0, 0.05)' },
                         ticks: {
-                            color: '#9CA3AF',
+                            color: '#6B7280',
                             font: { size: 9 },
                             callback: function(value) { return value + '%'; }
                         }
