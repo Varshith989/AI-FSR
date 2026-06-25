@@ -1,0 +1,1261 @@
+/* ----------------------------------------------------
+   SafeFood AI - Application Controller
+   Core Interactivity, Live Feeds, Scanner and Speech APIs
+   ---------------------------------------------------- */
+
+document.addEventListener('DOMContentLoaded', () => {
+    // ------------------------------------------------
+    // Navigation & Tab Management
+    // ------------------------------------------------
+    const navItems = document.querySelectorAll('.nav-item');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const pageTitle = document.getElementById('page-title');
+    const pageSubtitle = document.getElementById('page-subtitle');
+    const moduleCards = document.querySelectorAll('.module-card');
+
+    const tabMeta = {
+        'dashboard': { title: 'Overview Dashboard', subtitle: 'Real-time enterprise compliance health index' },
+        'regulatory': { title: 'Regulatory Compliance Assistant', subtitle: 'Interactive FSSAI helper and audit prep checklists' },
+        'doc-intel': { title: 'Safety Document Intelligence', subtitle: 'Scan SOPs and HACCP documentation for FSSAI alignment' },
+        'label-val': { title: 'AI Food Label Validator', subtitle: 'Ingredient analysis, nutritional audits and allergen checking' },
+        'recall-dash': { title: 'Predictive Safety & Recall Dashboard', subtitle: 'Predictive supplier risk indexing and outbreak monitoring' },
+        'voice-agent': { title: 'Multilingual Floor Audit Voice Agent', subtitle: 'Hands-free factory floor audits via speech commands' }
+    };
+
+    function switchTab(tabId) {
+        // Deactivate all nav items and tabs
+        navItems.forEach(item => item.classList.remove('active'));
+        tabContents.forEach(tab => tab.classList.remove('active'));
+
+        // Activate selected
+        const targetNavItem = document.querySelector(`.nav-item[data-tab="${tabId}"]`);
+        const targetTabContent = document.getElementById(`tab-${tabId}`);
+
+        if (targetNavItem && targetTabContent) {
+            targetNavItem.classList.add('active');
+            targetTabContent.classList.add('active');
+            
+            // Update Headers
+            const meta = tabMeta[tabId];
+            pageTitle.textContent = meta.title;
+            pageSubtitle.textContent = meta.subtitle;
+        }
+
+        // Initialize specific tab actions
+        if (tabId === 'recall-dash') {
+            initRecallChart();
+        }
+    }
+
+    navItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const tabId = item.getAttribute('data-tab');
+            switchTab(tabId);
+        });
+    });
+
+    moduleCards.forEach(card => {
+        card.addEventListener('click', () => {
+            const tabId = card.getAttribute('data-target');
+            switchTab(tabId);
+        });
+    });
+
+
+    // ------------------------------------------------
+    // Module 1: Regulatory Assistant
+    // ------------------------------------------------
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-input');
+    const chatMessages = document.getElementById('chat-messages');
+    const chipBtns = document.querySelectorAll('.chip-btn');
+
+    const botResponses = {
+        'default': 'According to FSSAI guidelines, compliance depends on your business scale. For general hygiene under Schedule 4, you must maintain clean surfaces, record temperatures, and procure raw materials only from FSSAI-licensed vendors. Can you specify your question?',
+        'dairy': 'FSSAI packaging rules mandate that pasteurized milk must be stored below 4°C at all times. The shelf life of pasteurized milk is typically 2-3 days under refrigeration, while UHT milk in aseptic cartons can be stored for up to 90 days without refrigeration until opened.',
+        'distributor': 'Food distributors must acquire an FSSAI State License if their annual turnover is between ₹12 Lakhs and ₹20 Crores. If turnover exceeds ₹20 Crores, or if importing/exporting food, a Central License is mandatory. The license number must be printed on all invoices.',
+        'jaivik': 'Yes, all organic food packages in India must carry the "Jaivik Bharat" organic logo alongside the FSSAI license number. Exemptions are granted only for direct sales by small organic producers to end consumers (turnover up to ₹12 Lakhs).',
+        'allergen': 'Under Food Safety Standards (Labelling and Display) Regulations 2020, mandatory allergen declarations are required for 8 categories: 1. Cereals containing Gluten, 2. Crustaceans, 3. Eggs, 4. Fish, 5. Peanuts/Tree Nuts, 6. Soybeans, 7. Milk, 8. Sulphite (in conc. > 10mg/kg). They must be highlighted in the ingredient list.'
+    };
+
+    function appendMessage(sender, text) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}`;
+        
+        const avatar = document.createElement('div');
+        avatar.className = 'msg-avatar';
+        avatar.innerHTML = sender === 'bot' ? '<i class="fa-solid fa-robot"></i>' : 'QA';
+        
+        const bubble = document.createElement('div');
+        bubble.className = 'msg-bubble';
+        
+        const p = document.createElement('p');
+        p.textContent = text;
+        
+        const time = document.createElement('div');
+        time.className = 'msg-time';
+        time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        bubble.appendChild(p);
+        bubble.appendChild(time);
+        messageDiv.appendChild(avatar);
+        messageDiv.appendChild(bubble);
+        
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+        return messageDiv;
+    }
+
+    function handleChatSubmit(query) {
+        if (!query.trim()) return;
+        
+        appendMessage('user', query);
+        chatInput.value = '';
+        
+        // Typing indicator
+        const typingIndicator = appendMessage('bot', 'AI is thinking...');
+        typingIndicator.classList.add('typing-indicator-placeholder');
+        
+        setTimeout(() => {
+            // Remove typing indicator
+            typingIndicator.remove();
+            
+            // Match response
+            let responseText = botResponses.default;
+            const cleanQuery = query.toLowerCase();
+            
+            if (cleanQuery.includes('dairy') || cleanQuery.includes('shelf life') || cleanQuery.includes('milk')) {
+                responseText = botResponses.dairy;
+            } else if (cleanQuery.includes('distributor') || cleanQuery.includes('license') || cleanQuery.includes('turnover')) {
+                responseText = botResponses.distributor;
+            } else if (cleanQuery.includes('jaivik') || cleanQuery.includes('organic') || cleanQuery.includes('logo')) {
+                responseText = botResponses.jaivik;
+            } else if (cleanQuery.includes('allergen') || cleanQuery.includes('warning') || cleanQuery.includes('mandatory')) {
+                responseText = botResponses.allergen;
+            }
+            
+            appendMessage('bot', responseText);
+        }, 1000);
+    }
+
+    chatForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleChatSubmit(chatInput.value);
+    });
+
+    chipBtns.forEach(chip => {
+        chip.addEventListener('click', () => {
+            const query = chip.getAttribute('data-query');
+            handleChatSubmit(query);
+        });
+    });
+
+    // ------------------------------------------------
+    // Checklist Generator
+    // ------------------------------------------------
+    const btnGenerateChecklist = document.getElementById('btn-generate-checklist');
+    const businessSelect = document.getElementById('business-type');
+    const checklistItems = document.getElementById('checklist-items');
+    const checklistCount = document.getElementById('checklist-count');
+    const checklistPercent = document.getElementById('checklist-percent');
+    const progressFill = document.getElementById('checklist-progress-fill');
+    const checklistActions = document.getElementById('checklist-actions');
+
+    // Modal
+    const auditModal = document.getElementById('audit-modal');
+    const btnCloseModal = document.getElementById('btn-close-modal');
+    const btnCancelModal = document.getElementById('btn-cancel-modal');
+    const btnExportAudit = document.getElementById('btn-export-audit');
+    const btnDownloadPdf = document.getElementById('btn-download-pdf');
+    const modalBusiness = document.getElementById('modal-business-type');
+    const modalPercent = document.getElementById('modal-compliance-percent');
+    const modalTicked = document.getElementById('modal-compliance-ticked');
+    const modalStatus = document.getElementById('modal-status-badge');
+
+    const checklistData = {
+        restaurant: [
+            { id: 'r1', text: 'All raw materials sourced from FSSAI registered/licensed vendors.', clause: 'Sec 4.1' },
+            { id: 'r2', text: 'Potable water quality checked and test records maintained.', clause: 'Sec 4.2.1' },
+            { id: 'r3', text: 'Refrigerators maintaining temperature below 5°C; freezers below -18°C.', clause: 'Sec 4.5.2' },
+            { id: 'r4', text: 'Separate cutting boards and knives used for raw/cooked food.', clause: 'Sec 4.3' },
+            { id: 'r5', text: 'All food handlers wearing clean aprons, gloves, and hairnets.', clause: 'Sec 4.6.1' },
+            { id: 'r6', text: 'Pest control treatment completed and traps logbook active.', clause: 'Sec 4.4.3' },
+            { id: 'r7', text: 'Annual health examination records of handlers present.', clause: 'Sec 4.6.2' },
+            { id: 'r8', text: 'First-in-First-out (FIFO) inventory method followed.', clause: 'Sec 4.3.2' },
+            { id: 'r9', text: 'All food containers labeled with date of preparation.', clause: 'Sec 4.7' },
+            { id: 'r10', text: 'Daily cleaning schedule logs signed by floor supervisor.', clause: 'Sec 4.4' }
+        ],
+        manufacturing: [
+            { id: 'm1', text: 'Raw material reception inspection checklist fully updated.', clause: 'Sched 4 Part II' },
+            { id: 'm2', text: 'Continuous temperature sensor monitoring validated for boiler.', clause: 'Sec 4.2.3' },
+            { id: 'm3', text: 'Clean-In-Place (CIP) systems operational and log updated.', clause: 'Sec 4.4.2' },
+            { id: 'm4', text: 'Quarantine area demarcated for substandard raw goods.', clause: 'Sec 4.1.2' },
+            { id: 'm5', text: 'Metal detector sensitivity tested hourly with test pieces.', clause: 'Sec 4.3.5' },
+            { id: 'm6', text: 'Staff personal hygiene screening conducted at shifts.', clause: 'Sec 4.6' },
+            { id: 'm7', text: 'All processing exhaust vents fitted with insect mesh.', clause: 'Sec 4.2.5' },
+            { id: 'm8', text: 'All food grade additives verified within maximum limits.', clause: 'Sec 4.5' },
+            { id: 'm9', text: 'Batch recall drill conducted and logged within past 12 mos.', clause: 'Sec 4.8' },
+            { id: 'm10', text: 'Waste disposal bins kept covered and emptied frequently.', clause: 'Sec 4.4.5' }
+        ],
+        warehouse: [
+            { id: 'w1', text: 'Loading dock clear of water stagnation and clutter.', clause: 'Sec 4.1.1' },
+            { id: 'w2', text: 'Cold chain storage records generated continuously.', clause: 'Sec 4.5.1' },
+            { id: 'w3', text: 'Pallets placed at least 15cm off floor & 45cm away from walls.', clause: 'Sec 4.2' },
+            { id: 'w4', text: 'No chemicals stored in same chamber as food products.', clause: 'Sec 4.3.1' },
+            { id: 'w5', text: 'Vehicle sanitization certificates verified before load.', clause: 'Sec 4.7.1' },
+            { id: 'w6', text: 'Humidity control logs recorded in dry goods warehouse.', clause: 'Sec 4.5.2' },
+            { id: 'w7', text: 'Extermination bait stations inspected and recorded weekly.', clause: 'Sec 4.4.1' },
+            { id: 'w8', text: 'Emergency exit paths clear and fire extinguishers operational.', clause: 'Sec 4.2.9' },
+            { id: 'w9', text: 'All stored pallets clearly carry Batch IDs & Expire labels.', clause: 'Sec 4.7.2' },
+            { id: 'w10', text: 'Visitor entry hygiene protocols signed and enforced.', clause: 'Sec 4.6.3' }
+        ]
+    };
+
+    function updateChecklistProgress() {
+        const total = checklistItems.querySelectorAll('.checklist-item').length;
+        const checked = checklistItems.querySelectorAll('.checklist-item input:checked').length;
+        
+        checklistCount.textContent = `${checked}/${total}`;
+        const percentage = total === 0 ? 0 : Math.round((checked / total) * 100);
+        checklistPercent.textContent = `${percentage}%`;
+        progressFill.style.width = `${percentage}%`;
+        
+        if (checked > 0) {
+            checklistActions.classList.remove('hidden');
+        } else {
+            checklistActions.classList.add('hidden');
+        }
+    }
+
+    btnGenerateChecklist.addEventListener('click', () => {
+        const type = businessSelect.value;
+        const items = checklistData[type];
+        
+        checklistItems.innerHTML = '';
+        
+        items.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'checklist-item';
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = item.id;
+            
+            const content = document.createElement('div');
+            content.className = 'checklist-item-content';
+            
+            const title = document.createElement('span');
+            title.className = 'checklist-item-title';
+            title.textContent = item.text;
+            
+            const clause = document.createElement('span');
+            clause.className = 'checklist-item-clause';
+            clause.textContent = `FSSAI Code: ${item.clause}`;
+            
+            content.appendChild(title);
+            content.appendChild(clause);
+            div.appendChild(checkbox);
+            div.appendChild(content);
+            
+            // Allow clicking item container to check the box
+            div.addEventListener('click', (e) => {
+                if (e.target !== checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    checkbox.dispatchEvent(new Event('change'));
+                }
+            });
+            
+            checkbox.addEventListener('change', updateChecklistProgress);
+            
+            checklistItems.appendChild(div);
+        });
+        
+        updateChecklistProgress();
+    });
+
+    // Modal Control
+    btnExportAudit.addEventListener('click', () => {
+        const total = checklistItems.querySelectorAll('.checklist-item').length;
+        const checked = checklistItems.querySelectorAll('.checklist-item input:checked').length;
+        const percentage = Math.round((checked / total) * 100);
+        
+        const labelMap = {
+            restaurant: 'Restaurant & Catering',
+            manufacturing: 'Food Manufacturer',
+            warehouse: 'Storage & Warehouse'
+        };
+        
+        modalBusiness.textContent = labelMap[businessSelect.value];
+        modalPercent.textContent = `${percentage}%`;
+        modalTicked.textContent = `${checked}/${total}`;
+        
+        if (percentage >= 80) {
+            modalStatus.textContent = 'Audit Ready';
+            modalStatus.className = 'badge badge-success-glow';
+        } else if (percentage >= 50) {
+            modalStatus.textContent = 'Action Required';
+            modalStatus.className = 'badge badge-warning-glow';
+        } else {
+            modalStatus.textContent = 'Non-Compliant';
+            modalStatus.className = 'badge badge-danger-glow';
+        }
+        
+        auditModal.classList.remove('hidden');
+    });
+
+    function closeModal() {
+        auditModal.classList.add('hidden');
+    }
+
+    btnCloseModal.addEventListener('click', closeModal);
+    btnCancelModal.addEventListener('click', closeModal);
+    auditModal.addEventListener('click', (e) => {
+        if (e.target === auditModal) closeModal();
+    });
+
+    btnDownloadPdf.addEventListener('click', () => {
+        btnDownloadPdf.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Compiling PDF...';
+        setTimeout(() => {
+            btnDownloadPdf.innerHTML = '<i class="fa-solid fa-circle-check"></i> Report Downloaded';
+            alert('Simulation: PDF Safety Audit Report downloaded successfully to your local machine.');
+            setTimeout(() => {
+                btnDownloadPdf.innerHTML = '<i class="fa-solid fa-download"></i> Download Audit Report PDF';
+                closeModal();
+            }, 1000);
+        }, 1500);
+    });
+
+
+    // ------------------------------------------------
+    // Module 2: Document Intelligence
+    // ------------------------------------------------
+    const templateBtns = document.querySelectorAll('.template-btn');
+    const docTitle = document.getElementById('doc-title');
+    const docContentViewer = document.getElementById('doc-content-viewer');
+    const docComplianceBadge = document.getElementById('doc-compliance-badge');
+    const docLoading = document.getElementById('doc-analyzer-loading');
+    const docResults = document.getElementById('doc-analyzer-results');
+    const haccpAlign = document.getElementById('haccp-align');
+    const fssaiAlign = document.getElementById('fssai-align');
+    const riskAlign = document.getElementById('risk-align');
+    const gapList = document.getElementById('gap-list-items');
+    const correctionsList = document.getElementById('corrections-items');
+    const uploadZone = document.getElementById('upload-zone');
+    const docFileInput = document.getElementById('doc-file-input');
+
+    const templates = {
+        'pest-control': {
+            title: 'Pest_Control_SOP_v2.txt',
+            size: '2.8 KB',
+            content: `STANDARD OPERATING PROCEDURE: INSECT AND RODENT CONTROL
+Scope: Production Floor & Dry Storage
+Status: Active
+
+1. PREVENTIVE DESIGN
+1.1 Air curtains must be installed above all exterior access doors.
+1.2 Strip curtains must block insect paths in the packaging hall.
+
+2. MONITORING SCHEDULING
+2.1 All rodent baits and traps must be checked <mark>twice every calendar month</mark> by the supervisor.
+2.2 If bait depletion is noticed, it must be reported to the sanitation lead.
+
+3. CHEMICAL APPLICATIONS
+3.1 Insecticide spray treatments must be conducted inside storage bins. <mark>Treatment can take place during standard production shifts</mark> if food products are covered under plastic tarps.
+
+4. LOG RETENTION
+4.1 The sanitization contractor must retain chemical application logs for <mark>6 months</mark>.`,
+            score: 68,
+            haccp: '8/10',
+            fssai: 'Critical Gaps',
+            risk: 'High Risk',
+            gaps: [
+                'Weekly checks on rodent traps are mandatory under FSSAI Schedule 4 (currently set to twice monthly).',
+                'Pesticide spraying during active production shifts poses massive chemical contamination risks; must only occur post-shift.',
+                'FSSAI requires record-keeping retention of sanitization and pest audits for a minimum of 12 months (currently 6 months).'
+            ],
+            corrections: [
+                {
+                    title: 'Corrective Clause 2.1 - Trapping Schedule',
+                    text: '“Rodent bait stations and mechanical pest traps shall be checked weekly (minimum once every 7 days) by a certified pest controller.”'
+                },
+                {
+                    title: 'Corrective Clause 3.1 - Chemical Application Restrictions',
+                    text: '“Chemical spraying or fogging is prohibited in processing areas during active food handling. Operations must halt, and all contact equipment must be sanitized post-treatment before resume.”'
+                }
+            ]
+        },
+        'cold-chain': {
+            title: 'HACCP_Cold_Chain_Protocol.txt',
+            size: '3.4 KB',
+            content: `HAZARD ANALYSIS AND CRITICAL CONTROL POINTS (HACCP)
+CCP #3: Raw Dairy Chilled Storage
+Critical Limit: 4.0 °C Maximum
+
+1. MONITORING PROTOCOL
+1.1 Dairy storage chamber temperatures must be read. <mark>Temperatures are manually logged on paper charts at the end of every morning and evening shift</mark> by the warehouse manager.
+
+2. CALIBRATION SCHEDULE
+2.1 Primary thermal probe sensors must be calibrated once <mark>every two years</mark> by a certified laboratory vendor.
+
+3. TEMPERATURE EXCURSION CORRECTIVE PLAN
+3.1 In the event storage room temperature climbs above 5.0 °C, product refrigeration must be checked. If temperature exceeds 6.0 °C for more than <mark>4 consecutive hours</mark>, raw milk batch must be discarded.`,
+            score: 82,
+            haccp: '9/10',
+            fssai: 'Satisfactory',
+            risk: 'Medium Risk',
+            gaps: [
+                'FSSAI Schedule 4 requires continuous automated temperature logging with warning triggers for critical dairy products instead of twice-daily manual charts.',
+                'Sensor calibration intervals (two years) are too sparse; thermal probes should undergo validation every 12 months minimum.'
+            ],
+            corrections: [
+                {
+                    title: 'Corrective Clause 1.1 - Automatic Logging System',
+                    text: '“Dairy cold rooms shall utilize continuous electronic digital data loggers with cloud backups. Alarms will trigger via email/SMS if temperature registers >4.0°C for over 15 minutes.”'
+                }
+            ]
+        },
+        'hygiene': {
+            title: 'Hygiene_Sanitization_SOP.txt',
+            size: '4.1 KB',
+            content: `STANDARD OPERATING PROCEDURE: PERSONAL HYGIENE & VAT SANITIZATION
+Scope: Mixing Vats & Handwash Stations
+
+1. EMPLOYEES PROTOCOL
+1.1 Handwashing: Staff must wash hands with warm water and soap for 20 seconds.
+1.2 Protective Gear: Hairnets and clean uniforms are mandatory before floor entrance.
+
+2. EQUIPMENT WASH ROUTINE
+2.1 Mixing vats shall be rinsed daily. <mark>Vats must be scrubbed using hot water only</mark> to clean residual organic compounds.
+
+3. STAFF HEALTH CHECKS
+3.1 Any worker displaying symptoms of diarrhea, coughing, or fever must report to QA. <mark>Personnel will return to processing lines immediately</mark> after symptoms stop without clinical clearance certificates.`,
+            score: 75,
+            haccp: '7/10',
+            fssai: 'Satisfactory',
+            risk: 'Medium Risk',
+            gaps: [
+                'Vat cleaning lacks validation: hot water alone does not eradicate bacterial bio-films. Food-grade sanitizing chemical application is missing.',
+                'Returning workers displaying contagious symptoms must present medical certification of clearance prior to resuming open food contact work.'
+            ],
+            corrections: [
+                {
+                    title: 'Corrective Clause 2.1 - Sanitizer Addition',
+                    text: '“Following hot water pre-rinse, vats must be washed with alkaline detergent, rinsed, and sanitized using an FSSAI-approved chlorine solution (100-200 ppm) or Quaternary Ammonium (200 ppm).”'
+                },
+                {
+                    title: 'Corrective Clause 3.1 - Medical Clearance',
+                    text: '“Staff recovering from infectious gastrointestinal or respiratory illnesses must be cleared in writing by a registered medical practitioner prior to floor entry.”'
+                }
+            ]
+        }
+    };
+
+    function runDocumentAnalysis(docKey) {
+        const doc = templates[docKey];
+        
+        // Setup states
+        docResults.classList.add('hidden');
+        docLoading.classList.remove('hidden');
+        docTitle.textContent = doc.title;
+        document.querySelector('.file-size').textContent = doc.size;
+        docContentViewer.innerHTML = doc.content;
+
+        setTimeout(() => {
+            // Populate Results
+            docLoading.classList.add('hidden');
+            docResults.classList.remove('hidden');
+            
+            docComplianceBadge.innerHTML = `<span class="compliance-score">${doc.score}%</span> Score`;
+            
+            // Adjust score text color
+            const scoreElement = docComplianceBadge.querySelector('.compliance-score');
+            if (doc.score >= 85) scoreElement.className = 'compliance-score text-success';
+            else if (doc.score >= 70) scoreElement.className = 'compliance-score text-warning';
+            else scoreElement.className = 'compliance-score text-danger';
+
+            haccpAlign.textContent = doc.haccp;
+            fssaiAlign.textContent = doc.fssai;
+            riskAlign.textContent = doc.risk;
+
+            // Class status labels
+            haccpAlign.className = 'score-card-val text-success';
+            fssaiAlign.className = doc.fssai.includes('Critical') ? 'score-card-val text-danger' : 'score-card-val text-warning';
+            riskAlign.className = doc.risk.includes('High') ? 'score-card-val text-danger' : (doc.risk.includes('Medium') ? 'score-card-val text-warning' : 'score-card-val text-success');
+
+            // Render gaps
+            gapList.innerHTML = '';
+            doc.gaps.forEach(gap => {
+                const li = document.createElement('li');
+                li.className = 'gap-item';
+                li.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <span>${gap}</span>`;
+                gapList.appendChild(li);
+            });
+
+            // Render corrections
+            correctionsList.innerHTML = '';
+            doc.corrections.forEach(corr => {
+                const card = document.createElement('div');
+                card.className = 'correction-card';
+                
+                const title = document.createElement('span');
+                title.className = 'correction-title';
+                title.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${corr.title}`;
+                
+                const code = document.createElement('div');
+                code.className = 'correction-text';
+                code.textContent = corr.text;
+
+                card.appendChild(title);
+                card.appendChild(code);
+                correctionsList.appendChild(card);
+            });
+
+        }, 1500);
+    }
+
+    templateBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            templateBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const docKey = btn.getAttribute('data-doc');
+            runDocumentAnalysis(docKey);
+        });
+    });
+
+    // Run first analysis initially
+    runDocumentAnalysis('pest-control');
+
+    // Drag and Drop simulation
+    uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.style.borderColor = 'var(--teal)';
+        uploadZone.style.backgroundColor = 'rgba(49, 151, 149, 0.05)';
+    });
+
+    uploadZone.addEventListener('dragleave', () => {
+        uploadZone.style.borderColor = 'var(--border-glass-active)';
+        uploadZone.style.backgroundColor = 'rgba(0, 0, 0, 0.15)';
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.style.borderColor = 'var(--border-glass-active)';
+        uploadZone.style.backgroundColor = 'rgba(0, 0, 0, 0.15)';
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileUpload(files[0]);
+        }
+    });
+
+    uploadZone.addEventListener('click', () => {
+        docFileInput.click();
+    });
+
+    docFileInput.addEventListener('change', () => {
+        if (docFileInput.files.length > 0) {
+            handleFileUpload(docFileInput.files[0]);
+        }
+    });
+
+    function handleFileUpload(file) {
+        docResults.classList.add('hidden');
+        docLoading.classList.remove('hidden');
+        docTitle.textContent = file.name;
+        document.querySelector('.file-size').textContent = `${(file.size / 1024).toFixed(1)} KB`;
+        docContentViewer.innerHTML = `Simulating upload analysis of document:\n"${file.name}"\n\nFile format confirmed. Standard raw text parser running NLP entities scanner...`;
+
+        setTimeout(() => {
+            docLoading.classList.add('hidden');
+            docResults.classList.remove('hidden');
+            docComplianceBadge.innerHTML = `<span class="compliance-score text-warning">78%</span> Score`;
+            haccpAlign.textContent = '8/10';
+            fssaiAlign.textContent = 'Minor Gaps';
+            riskAlign.textContent = 'Low Risk';
+            
+            gapList.innerHTML = `
+                <li class="gap-item" style="color: #FBD38D; border-color: rgba(221, 107, 32, 0.15); background-color: rgba(221, 107, 32, 0.03);">
+                    <i class="fa-solid fa-triangle-exclamation" style="color: var(--warning)"></i> 
+                    <span>Document contains general hygiene protocols but lacks specific critical control limit metrics (CCPs).</span>
+                </li>
+            `;
+            
+            correctionsList.innerHTML = `
+                <div class="correction-card" style="border-color: var(--border-glass)">
+                    <span class="correction-title" style="color: var(--text-secondary)"><i class="fa-solid fa-circle-info"></i> Recommendation</span>
+                    <div class="correction-text">“Please append standard HACCP CCP sheets detailing limits, probe numbers, and safety tolerances at the end of the document.”</div>
+                </div>
+            `;
+        }, 1500);
+    }
+
+
+    // ------------------------------------------------
+    // Module 3: Food Label Validator
+    // ------------------------------------------------
+    const productSelect = document.getElementById('product-sample');
+    const labelImageDisplay = document.getElementById('label-image-display');
+    const btnStartScan = document.getElementById('btn-start-scan');
+    const scanLaser = document.getElementById('scan-laser');
+    const scanningOverlay = document.getElementById('scanning-overlay');
+    const scannerWindow = document.getElementById('scanner-window');
+    
+    // Report Elements
+    const labelBadge = document.getElementById('label-overall-badge');
+    const labelAuditBody = document.getElementById('label-audit-body');
+    const nutriPillsContainer = document.getElementById('nutri-pills-container');
+    const ingredientWarningsContainer = document.getElementById('ingredient-warnings-container');
+    const mandatoryWarningsBox = document.getElementById('mandatory-warnings-box');
+    const complianceVerdictBox = document.getElementById('compliance-verdict-box');
+
+    const products = {
+        'energy-drink': {
+            labelHTML: `
+                <div class="mock-label">
+                    <h4>HYPERVOLT ENERGY</h4>
+                    <div class="label-section">
+                        <div class="label-row label-bold"><span>Nutrition Facts</span></div>
+                        <div class="label-row"><span>Serving Size: 500ml</span></div>
+                    </div>
+                    <div class="label-section">
+                        <div class="label-row label-bold"><span>Amount Per Serving</span></div>
+                        <div class="label-row"><span>Calories</span><span>210 kcal</span></div>
+                        <div class="label-row"><span>Total Fat</span><span>0g</span></div>
+                        <div class="label-row label-bold"><span>Total Sugar</span><span>70g (14%)</span></div>
+                        <div class="label-row"><span>Protein</span><span>0g</span></div>
+                        <div class="label-row label-bold"><span>Caffeine</span><span>160mg</span></div>
+                    </div>
+                    <div class="ingredients-box">
+                        <strong>Ingredients:</strong> Carbonated Water, High Fructose Corn Syrup, Caffeine, Citric Acid, Taurine, Sodium Benzoate, Yellow 5 (Tartrazine).
+                    </div>
+                </div>
+            `,
+            overallBadge: { text: 'Rejected (45%)', class: 'badge badge-danger-glow' },
+            nutriPills: [
+                { text: 'Sugar: 70g (HIGH)', class: 'warn' },
+                { text: 'Caffeine: 320mg/L (CRITICAL)', class: 'warn' },
+                { text: 'Fat: 0g (Passed)', class: 'pass' }
+            ],
+            warnings: [
+                { text: 'Caffeine concentration (320 mg/L) violates FSSAI max caffeine cap of 145 mg/L for carbonated drinks.', class: 'danger-warning' },
+                { text: 'Contains Yellow 5 (Tartrazine) dye which requires a specific artificial coloring declaration.', class: 'info-warning' }
+            ],
+            mandatory: '“CONTAINS CAFFEINE. NOT RECOMMENDED FOR CHILDREN, PREGNANT OR LACTATING WOMEN.” - *WARNING STATEMENT MISSING FROM PACKAGE*',
+            verdict: {
+                class: 'verdict-rejected',
+                icon: '<i class="fa-solid fa-circle-xmark"></i>',
+                title: 'REJECTED: Regulatory Breach',
+                desc: 'Caffeine exceeds carbonated limits and mandatory caffeine health warning statements are missing from labelling.'
+            }
+        },
+        'potato-chips': {
+            labelHTML: `
+                <div class="mock-label">
+                    <h4>SPICY MASALA CHIPS</h4>
+                    <div class="label-section">
+                        <div class="label-row label-bold"><span>Nutrition Facts</span></div>
+                        <div class="label-row"><span>Serving Size: 30g</span></div>
+                    </div>
+                    <div class="label-section">
+                        <div class="label-row label-bold"><span>Amount Per Serving</span></div>
+                        <div class="label-row"><span>Total Fat</span><span>11g (17%)</span></div>
+                        <div class="label-row"><span>Saturated Fat</span><span>4.5g (23%)</span></div>
+                        <div class="label-row"><span>Sodium</span><span>380mg (16%)</span></div>
+                        <div class="label-row"><span>Sugars</span><span>0.5g</span></div>
+                    </div>
+                    <div class="ingredients-box">
+                        <strong>Ingredients:</strong> Selected Potatoes, Vegetable Oil, Monosodium Glutamate (MSG), Chili Powder, Garlic Extract, Salt.
+                    </div>
+                </div>
+            `,
+            overallBadge: { text: 'Warning (75%)', class: 'badge badge-warning-glow' },
+            nutriPills: [
+                { text: 'Sodium: 380mg (HIGH)', class: 'warn' },
+                { text: 'Saturated Fat: 4.5g (HIGH)', class: 'warn' },
+                { text: 'Sugar: 0.5g (Low)', class: 'pass' }
+            ],
+            warnings: [
+                { text: 'Contains MSG (flavour enhancer 621) which is present but not explicitly listed in the allergen warnings block.', class: 'danger-warning' }
+            ],
+            mandatory: '“CONTAINS ADDED MONOSODIUM GLUTAMATE. NOT RECOMMENDED FOR INFANTS.” - *Present on side, verified.*',
+            verdict: {
+                class: 'verdict-warning',
+                icon: '<i class="fa-solid fa-triangle-exclamation"></i>',
+                title: 'WARNING: High Sodium & Saturated Fats',
+                desc: 'Label passes legal declarations but ingredients index triggers high sodium/fat warnings which will require front-of-pack red stickers under upcoming mandates.'
+            }
+        },
+        'baby-cereal': {
+            labelHTML: `
+                <div class="mock-label">
+                    <h4>GROWMAX BABY CEREAL</h4>
+                    <div class="label-section">
+                        <div class="label-row label-bold"><span>Nutrition Facts</span></div>
+                        <div class="label-row"><span>Serving Size: 50g</span></div>
+                    </div>
+                    <div class="label-section">
+                        <div class="label-row label-bold"><span>Amount Per Serving</span></div>
+                        <div class="label-row"><span>Protein</span><span>6.2g</span></div>
+                        <div class="label-row"><span>Sugars</span><span>2g</span></div>
+                        <div class="label-row"><span>Iron (Fortified)</span><span>5mg (60%)</span></div>
+                        <div class="label-row"><span>Calcium</span><span>120mg</span></div>
+                    </div>
+                    <div class="ingredients-box">
+                        <strong>Ingredients:</strong> Whole Wheat Flour, Skimmed Milk Powder, Honey, Iron Pyrophosphate, Calcium Carbonate.
+                    </div>
+                </div>
+            `,
+            overallBadge: { text: 'Approved (96%)', class: 'badge badge-success-glow' },
+            nutriPills: [
+                { text: 'Added Sugar: 2g (Passed)', class: 'pass' },
+                { text: 'Protein: 6.2g (Optimal)', class: 'pass' },
+                { text: 'Iron: Fortified (Optimal)', class: 'pass' }
+            ],
+            warnings: [
+                { text: 'Contains Wheat (Gluten) and Milk ingredients. Allergen declaration is correctly highlighted.', class: 'info-warning' }
+            ],
+            mandatory: '“INFANT FOOD. USE ONLY UNDER MEDICAL ADVICE.” - *Present on front panel, verified.*',
+            verdict: {
+                class: 'verdict-approved',
+                icon: '<i class="fa-solid fa-circle-check"></i>',
+                title: 'APPROVED: Fully Compliant',
+                desc: 'Excellent nutritional formulation. All allergen callouts and mandatory infant feeding disclaimer sentences are correct.'
+            }
+        }
+    };
+
+    function updateLabelGraphic() {
+        const prodKey = productSelect.value;
+        labelImageDisplay.innerHTML = products[prodKey].labelHTML;
+        
+        // Reset analysis reports
+        labelBadge.textContent = 'Awaiting Scan';
+        labelBadge.className = 'badge badge-secondary';
+        nutriPillsContainer.innerHTML = '';
+        ingredientWarningsContainer.innerHTML = '';
+        mandatoryWarningsBox.textContent = 'Please run the laser scan to parse nutritional details.';
+        complianceVerdictBox.className = 'hidden';
+    }
+
+    productSelect.addEventListener('change', updateLabelGraphic);
+    updateLabelGraphic(); // init initial label
+
+    btnStartScan.addEventListener('click', () => {
+        const prodKey = productSelect.value;
+        const prodData = products[prodKey];
+
+        // Animate Scan
+        scannerWindow.classList.add('scan-active');
+        scanningOverlay.classList.remove('hidden');
+        btnStartScan.disabled = true;
+
+        setTimeout(() => {
+            // Remove Scan Animation
+            scannerWindow.classList.remove('scan-active');
+            scanningOverlay.classList.add('hidden');
+            btnStartScan.disabled = false;
+
+            // Populate Report
+            labelBadge.textContent = prodData.overallBadge.text;
+            labelBadge.className = prodData.overallBadge.class;
+
+            // Nutri pills
+            nutriPillsContainer.innerHTML = '';
+            prodData.nutriPills.forEach(pill => {
+                const span = document.createElement('span');
+                span.className = `nutri-pill ${pill.class}`;
+                span.innerHTML = pill.class === 'pass' 
+                    ? `<i class="fa-solid fa-circle-check"></i> ${pill.text}`
+                    : `<i class="fa-solid fa-triangle-exclamation"></i> ${pill.text}`;
+                nutriPillsContainer.appendChild(span);
+            });
+
+            // Allergen Warnings
+            ingredientWarningsContainer.innerHTML = '';
+            prodData.warnings.forEach(warn => {
+                const div = document.createElement('div');
+                div.className = `warning-item ${warn.class}`;
+                div.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> <span>${warn.text}</span>`;
+                ingredientWarningsContainer.appendChild(div);
+            });
+
+            // Mandatory box
+            mandatoryWarningsBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-warning"></i> <span>${prodData.mandatory}</span>`;
+
+            // Verdict
+            complianceVerdictBox.className = `compliance-verdict-box ${prodData.verdict.class}`;
+            complianceVerdictBox.innerHTML = `
+                <div class="verdict-icon">${prodData.verdict.icon}</div>
+                <div class="verdict-info">
+                    <span class="verdict-title">${prodData.verdict.title}</span>
+                    <span class="verdict-desc">${prodData.verdict.desc}</span>
+                </div>
+            `;
+
+        }, 2000);
+    });
+
+
+    // ------------------------------------------------
+    // Module 4: Recall Prediction Dashboard
+    // ------------------------------------------------
+    let recallChart = null;
+
+    function initRecallChart() {
+        const ctx = document.getElementById('riskChart');
+        if (!ctx) return;
+        
+        // Prevent double instantiations
+        if (recallChart) return;
+
+        const purpleGrad = ctx.getContext('2d').createLinearGradient(0, 0, 0, 200);
+        purpleGrad.addColorStop(0, 'rgba(159, 122, 234, 0.4)');
+        purpleGrad.addColorStop(1, 'rgba(159, 122, 234, 0.0)');
+
+        const orangeGrad = ctx.getContext('2d').createLinearGradient(0, 0, 0, 200);
+        orangeGrad.addColorStop(0, 'rgba(221, 107, 32, 0.4)');
+        orangeGrad.addColorStop(1, 'rgba(221, 107, 32, 0.0)');
+
+        const blueGrad = ctx.getContext('2d').createLinearGradient(0, 0, 0, 200);
+        blueGrad.addColorStop(0, 'rgba(49, 130, 206, 0.4)');
+        blueGrad.addColorStop(1, 'rgba(49, 130, 206, 0.0)');
+
+        recallChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Jan 2026', 'Feb 2026', 'Mar 2026', 'Apr 2026', 'May 2026', 'Jun 2026 (Proj)'],
+                datasets: [
+                    {
+                        label: 'E. coli Risk Index',
+                        data: [15, 22, 19, 45, 68, 78],
+                        borderColor: '#9F7AEA',
+                        backgroundColor: purpleGrad,
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2.5
+                    },
+                    {
+                        label: 'Salmonella Outbreaks',
+                        data: [28, 30, 15, 24, 38, 42],
+                        borderColor: '#DD6B20',
+                        backgroundColor: orangeGrad,
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2.5
+                    },
+                    {
+                        label: 'Listeria Contamination',
+                        data: [52, 48, 32, 20, 12, 8],
+                        borderColor: '#3182CE',
+                        backgroundColor: blueGrad,
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2.5
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#9CA3AF',
+                            font: { family: 'Inter', size: 10 }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255,255,255,0.03)' },
+                        ticks: { color: '#9CA3AF', font: { size: 9 } }
+                    },
+                    y: {
+                        min: 0,
+                        max: 100,
+                        grid: { color: 'rgba(255,255,255,0.03)' },
+                        ticks: {
+                            color: '#9CA3AF',
+                            font: { size: 9 },
+                            callback: function(value) { return value + '%'; }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Dynamic High Risk Suppliers
+    const supplierTableBody = document.getElementById('supplier-table-body');
+    const liveAlertsFeed = document.getElementById('live-alerts-feed');
+    const actionDetailsPanel = document.getElementById('action-details-panel');
+
+    const supplierData = [
+        { id: 'S-102', batch: 'B-402', pathogen: 'E. coli trace risk', risk: '78%', status: 'monitored' },
+        { id: 'S-208', batch: 'B-389', pathogen: 'Salmonella warning', risk: '42%', status: 'cleared' },
+        { id: 'S-090', batch: 'B-411', pathogen: 'Listeria risk', risk: '84%', status: 'quarantined' }
+    ];
+
+    const initialFeedAlerts = [
+        { time: '2 mins ago', type: 'danger', text: 'E. coli trace risk detected in supplier S-102 batch B-402 due to temperature deviation in logistics transport vat.' },
+        { time: '1 hour ago', type: 'info', text: 'Supplier S-208 batch B-389 passed double sanitization verify loop. Heavy metal assay confirms safe PPM.' },
+        { time: '3 hours ago', type: 'warning', text: 'Listeria outbreak vector warning issued for storage district near Supplier S-090. Batch quarantine initialized.' }
+    ];
+
+    function updateSupplierTable() {
+        supplierTableBody.innerHTML = '';
+        supplierData.forEach(sup => {
+            const tr = document.createElement('tr');
+            
+            const classMap = {
+                quarantined: 'status-pill quarantined',
+                monitored: 'status-pill monitored',
+                cleared: 'status-pill cleared'
+            };
+            
+            tr.innerHTML = `
+                <td><strong>${sup.id}</strong></td>
+                <td>${sup.batch}</td>
+                <td><span class="${sup.status === 'quarantined' ? 'text-danger' : (sup.status === 'monitored' ? 'text-warning' : 'text-success')}">${sup.pathogen}</span></td>
+                <td><strong>${sup.risk}</strong></td>
+                <td><span class="${classMap[sup.status]}" data-sup="${sup.id}">${sup.status.toUpperCase()}</span></td>
+            `;
+
+            // Setup change status interactive action directly by clicking status badge
+            const statusBadge = tr.querySelector('.status-pill');
+            statusBadge.addEventListener('click', () => {
+                if (sup.status === 'monitored') {
+                    quarantineAction(sup.id);
+                } else if (sup.status === 'quarantined') {
+                    clearAction(sup.id);
+                }
+            });
+
+            supplierTableBody.appendChild(tr);
+        });
+    }
+
+    function renderFeed() {
+        liveAlertsFeed.innerHTML = '';
+        initialFeedAlerts.forEach(alert => {
+            const div = document.createElement('div');
+            div.className = `feed-item feed-${alert.type}`;
+            div.innerHTML = `
+                <div class="feed-details">
+                    <span class="feed-title">${alert.type === 'danger' ? 'Critical Risk Alarm' : (alert.type === 'warning' ? 'Outbreak Vector Warning' : 'Assurance Approved')}</span>
+                    <span class="feed-meta">${alert.text}</span>
+                </div>
+                <span class="feed-time-badge">${alert.time}</span>
+            `;
+            liveAlertsFeed.appendChild(div);
+        });
+    }
+
+    function quarantineAction(supplierId) {
+        // Update table item state
+        const target = supplierData.find(s => s.id === supplierId);
+        if (target) {
+            target.status = 'quarantined';
+            target.risk = '12%'; // risk drops once quarantined
+            updateSupplierTable();
+
+            // Update stats indicators on metrics row
+            document.getElementById('metric-risk-index').textContent = 'Moderate (35%)';
+            document.getElementById('metric-risk-index').className = 'metric-value text-warning';
+            
+            document.getElementById('metric-alert-count').textContent = '1 Active';
+            
+            document.getElementById('metric-quarantine-count').textContent = '15 Batches';
+
+            // Add alert to feed
+            initialFeedAlerts.unshift({
+                time: 'Just now',
+                type: 'warning',
+                text: `Batch ${target.batch} from Supplier ${target.id} was legally quarantined. Containment procedures initiated.`
+            });
+            renderFeed();
+
+            // Update Action panel
+            renderActionPanel();
+        }
+    }
+
+    function clearAction(supplierId) {
+        const target = supplierData.find(s => s.id === supplierId);
+        if (target) {
+            target.status = 'cleared';
+            target.risk = '5%';
+            updateSupplierTable();
+
+            initialFeedAlerts.unshift({
+                time: 'Just now',
+                type: 'info',
+                text: `Batch ${target.batch} cleared from warning quarantine post sanitation tests.`
+            });
+            renderFeed();
+            renderActionPanel();
+        }
+    }
+
+    function renderActionPanel() {
+        const highestRisk = supplierData.find(s => s.status === 'monitored');
+        
+        if (highestRisk) {
+            actionDetailsPanel.innerHTML = `
+                <div class="action-meta">TARGET: SUPPLIER ${highestRisk.id} | BATCH ${highestRisk.batch} | PROBABILITY: ${highestRisk.risk}</div>
+                <div class="action-instruction">High probability E. coli trace contamination risk detected. FSSAI Chapter 3 compliance requires physical quarantine of the batch and formal supplier diagnostic auditing.</div>
+                <div class="action-buttons">
+                    <button class="btn btn-teal" id="btn-quarantine-now"><i class="fa-solid fa-ban"></i> Quarantine Batch</button>
+                    <button class="btn btn-secondary" id="btn-notify-supplier"><i class="fa-solid fa-envelope"></i> Send Alert Email</button>
+                </div>
+            `;
+            
+            document.getElementById('btn-quarantine-now').addEventListener('click', () => {
+                quarantineAction(highestRisk.id);
+            });
+
+            document.getElementById('btn-notify-supplier').addEventListener('click', () => {
+                alert(`Simulation: Warning notification dispatched to Supplier ${highestRisk.id} regarding Batch ${highestRisk.batch} contamination levels.`);
+            });
+        } else {
+            actionDetailsPanel.innerHTML = `
+                <div class="action-instruction" style="color: var(--text-secondary); text-align: center; padding: 1rem 0;">
+                    <i class="fa-solid fa-circle-check text-success" style="font-size: 1.5rem; margin-bottom: 0.5rem; display: block;"></i>
+                    All critical outlier batches quarantined or cleared. Real-time risks are currently stabilized.
+                </div>
+            `;
+        }
+    }
+
+    // Init recall data
+    updateSupplierTable();
+    renderFeed();
+    renderActionPanel();
+
+    // Outbreak feed simulation adding alerts automatically
+    let alertCounter = 0;
+    setInterval(() => {
+        if (tabContents[4].classList.contains('active')) { // only run if user is viewing recall predictions tab
+            alertCounter++;
+            const pathogens = ['Listeria', 'Salmonella', 'E. coli'];
+            const randomPathogen = pathogens[Math.floor(Math.random() * pathogens.length)];
+            const randomNum = Math.floor(Math.random() * 200) + 100;
+            const newAlert = {
+                time: 'Just now',
+                type: Math.random() > 0.5 ? 'warning' : 'info',
+                text: `Real-time sensor update: Batch B-${randomNum} pathogen assays register clean indices for ${randomPathogen}.`
+            };
+            initialFeedAlerts.unshift(newAlert);
+            if (initialFeedAlerts.length > 5) initialFeedAlerts.pop();
+            renderFeed();
+        }
+    }, 15000);
+
+
+    // ------------------------------------------------
+    // Module 5: Multilingual Voice Agent
+    // ------------------------------------------------
+    const voiceLangSelect = document.getElementById('voice-lang');
+    const soundwave = document.getElementById('soundwave-container');
+    const btnMicTrigger = document.getElementById('btn-mic-trigger');
+    const micStatusLabel = document.getElementById('mic-status-label');
+    const voiceConversation = document.getElementById('voice-conversation-stream');
+    const quickVoiceChips = document.querySelectorAll('.voice-chip-btn');
+    const speechSupportAlert = document.getElementById('speech-support-alert');
+
+    // Voice response matrix
+    const voiceAnswers = {
+        'en-IN': {
+            'check restaurant hygiene rule': 'Under FSSAI schedule 4, restaurants must maintain records of potable water testing, keep foods segregated, store products off the ground, and ensure handlers undergo medical certification.',
+            'what are organic food logo regulations': 'Organic packages must carry the Jaivik Bharat organic symbol alongside the standard FSSAI logo. The Jaivik logo has a leaf and circle representing natural purity.',
+            'recommend corrective action for bacteria': 'For bacterial contamination, quarantine the infected batch immediately. Sanitize storage tanks using quaternary ammonium at 200 ppm, and increase Pasteurization temperature to 72 degrees Celsius for 15 seconds.',
+            'default': 'I have received your command. FSSAI standards suggest checking raw material logs and scheduling regular cleaning sessions. Can you repeat that query?'
+        },
+        'hi-IN': {
+            'डेयरी उत्पाद शेल्फ लाइफ नियम क्या है': 'एफ एस एस ए आई के नियमों के अनुसार, पास्चुरीकृत दूध को 4 डिग्री सेल्सियस से कम तापमान पर रखा जाना चाहिए। इसकी शेल्फ लाइफ 2 से 3 दिन की होती है।',
+            'हलाल और शाकाहारी मार्क नियम क्या है': 'शाकाहारी भोजन के लिए पैकेज पर हरे रंग का बिंदीदार निशान होना अनिवार्य है। यह निशान एक चौकोर हरे रंग के बॉक्स के अंदर एक हरा गोल बिंदु होता है।',
+            'default': 'मुझे आपका निर्देश मिल गया है। कृपया खाद्य सुरक्षा नियमों का पालन करें और स्वच्छता का ध्यान रखें। क्या आप इसे दोहरा सकते हैं?'
+        },
+        'ta-IN': {
+            'உணவு பாதுகாப்பு உரிமம் பெறுவது எப்படி': 'வருடாந்திர வருவாய் 12 லட்சத்திற்கு மேல் இருந்தால் மாநில உரிமம் தேவை. 20 கோடிக்கு மேல் இருந்தால் மத்திய உரிமம் கட்டாயம் பெற வேண்டும்.',
+            'உணவு லேபிள் விதிகள் என்ன': 'உணவு லேபிள்களில் தயாரிப்பு பெயர், தயாரிப்பாளர் முகவரி, காலாவதியாகும் தேதி, ஊட்டச்சத்து விவரங்கள் மற்றும் அலர்ஜி எச்சரிக்கைகள் கட்டாயம் இருக்க வேண்டும்.',
+            'default': 'உங்கள் கட்டளை ஏற்றுக்கொள்ளப்பட்டது. உணவு பாதுகாப்பு சட்டத்தின்படி தரம் சரிபார்க்கப்பட வேண்டும். மீண்டும் கூற முடியுமா?'
+        }
+    };
+
+    // Check browser SpeechRecognition API support
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const isSpeechSupported = !!SpeechRecognition;
+
+    if (!isSpeechSupported) {
+        speechSupportAlert.style.display = 'flex';
+    }
+
+    // TTS Utility
+    function speakText(text, lang) {
+        if ('speechSynthesis' in window) {
+            // Cancel any active speakings
+            window.speechSynthesis.cancel();
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = lang;
+            
+            // Try to find a nice local voice matching language
+            const voices = window.speechSynthesis.getVoices();
+            let voice = null;
+            
+            if (lang.startsWith('en')) {
+                voice = voices.find(v => v.lang.includes('IN') || v.lang.includes('GB') || v.lang.includes('US'));
+            } else if (lang.startsWith('hi')) {
+                voice = voices.find(v => v.lang.includes('IN') && v.name.includes('Hindi'));
+            } else if (lang.startsWith('ta')) {
+                voice = voices.find(v => v.lang.includes('IN') && v.name.includes('Tamil'));
+            }
+            
+            if (voice) utterance.voice = voice;
+            
+            // Animate wave while speaking
+            utterance.onstart = () => {
+                soundwave.classList.add('wave-active');
+            };
+            utterance.onend = () => {
+                soundwave.classList.remove('wave-active');
+            };
+            
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+
+    // Append Speech Bubbles
+    function appendSpeechBubble(sender, speaker, text) {
+        const bubble = document.createElement('div');
+        bubble.className = `speech-bubble ${sender}`;
+        bubble.innerHTML = `
+            <span class="speaker-tag">${speaker}</span>
+            <p class="speech-text">${text}</p>
+        `;
+        voiceConversation.appendChild(bubble);
+        voiceConversation.scrollTop = voiceConversation.scrollHeight;
+    }
+
+    function triggerVoiceSimulation(utteranceText, lang) {
+        // Stop current speaking
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+
+        // user bubble
+        appendSpeechBubble('user', 'QA Auditor', `"${utteranceText}"`);
+        
+        // visual soundwave active during thinking/listening
+        soundwave.classList.add('wave-active');
+        micStatusLabel.textContent = 'Analyzing speech database...';
+
+        setTimeout(() => {
+            soundwave.classList.remove('wave-active');
+            
+            // match responses
+            const responses = voiceAnswers[lang] || voiceAnswers['en-IN'];
+            let replyText = responses[utteranceText] || responses['default'];
+            
+            // assistant bubble
+            appendSpeechBubble('assistant', 'AI Safety Assistant', replyText);
+            micStatusLabel.textContent = 'Click the microphone and say a command';
+            
+            // Speak reply
+            speakText(replyText, lang);
+
+        }, 1200);
+    }
+
+    // Mic triggers Speech Recognition or Fallback Simulation
+    let recognitionInstance = null;
+
+    if (isSpeechSupported) {
+        recognitionInstance = new SpeechRecognition();
+        recognitionInstance.continuous = false;
+        recognitionInstance.interimResults = false;
+
+        recognitionInstance.onstart = () => {
+            document.getElementById('tab-voice-agent').classList.add('mic-listening');
+            soundwave.classList.add('wave-active');
+            micStatusLabel.textContent = 'Listening for speech input...';
+        };
+
+        recognitionInstance.onerror = () => {
+            soundwave.classList.remove('wave-active');
+            document.getElementById('tab-voice-agent').classList.remove('mic-listening');
+            micStatusLabel.textContent = 'Speech error. Please try again.';
+        };
+
+        recognitionInstance.onend = () => {
+            document.getElementById('tab-voice-agent').classList.remove('mic-listening');
+        };
+
+        recognitionInstance.onresult = (event) => {
+            const spokenText = event.results[0][0].transcript;
+            const activeLang = voiceLangSelect.value;
+            triggerVoiceSimulation(spokenText, activeLang);
+        };
+    }
+
+    btnMicTrigger.addEventListener('click', () => {
+        const activeLang = voiceLangSelect.value;
+        
+        if (isSpeechSupported) {
+            recognitionInstance.lang = activeLang;
+            recognitionInstance.start();
+        } else {
+            // Fallback simulation when API unsupported
+            document.getElementById('tab-voice-agent').classList.add('mic-listening');
+            soundwave.classList.add('wave-active');
+            micStatusLabel.textContent = 'Listening (Fallback Simulation active)...';
+
+            setTimeout(() => {
+                document.getElementById('tab-voice-agent').classList.remove('mic-listening');
+                soundwave.classList.remove('wave-active');
+
+                // Pick a default speech phrase based on lang
+                let simulatedPhrases = [];
+                if (activeLang === 'en-IN') {
+                    simulatedPhrases = [
+                        'check restaurant hygiene rule',
+                        'what are organic food logo regulations',
+                        'recommend corrective action for bacteria'
+                    ];
+                } else if (activeLang === 'hi-IN') {
+                    simulatedPhrases = [
+                        'डेयरी उत्पाद शेल्फ लाइफ नियम क्या है',
+                        'हलाल और शाकाहारी मार्क नियम क्या है'
+                    ];
+                } else {
+                    simulatedPhrases = [
+                        'உணவு பாதுகாப்பு உரிமம் பெறுவது எப்படி',
+                        'உணவு லேபிள் விதிகள் என்ன'
+                    ];
+                }
+
+                const randomUtterance = simulatedPhrases[Math.floor(Math.random() * simulatedPhrases.length)];
+                triggerVoiceSimulation(randomUtterance, activeLang);
+
+            }, 2500);
+        }
+    });
+
+    quickVoiceChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+            const utterance = chip.getAttribute('data-utterance');
+            const lang = chip.getAttribute('data-lang');
+            
+            // Sync dropdown language selector automatically
+            voiceLangSelect.value = lang;
+            
+            triggerVoiceSimulation(utterance, lang);
+        });
+    });
+
+    // Make sure voices load (Chrome bug workaround)
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.getVoices();
+    }
+});
