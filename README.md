@@ -109,6 +109,30 @@ SafeFood AI is built with zero runtime dependencies. All you need is a modern we
 
 ---
 
+## 🌐 Deploying to Render
+
+You can deploy SafeFood AI on [Render](https://render.com) for free in two ways:
+
+### Option 1: Static Site (Recommended & 100% Free)
+1. In Render Dashboard, click **New +** -> **Static Site**.
+2. Connect your GitHub repository: `https://github.com/naveen-kumar-agraharam/AI-FSR`.
+3. Configure the settings:
+   - **Name**: `safefood-ai` (or your preferred name)
+   - **Branch**: `main`
+   - **Build Command**: *(Leave empty)*
+   - **Publish Directory**: `.`
+4. Click **Create Static Site**.
+
+*(Note: The included `render.yaml` automatically sets up the static rewrite rules.)*
+
+### Option 2: Web Service (Node.js)
+If deploying as a Web Service:
+- **Build Command**: `npm install` (or leave empty)
+- **Start Command**: `node server.js`
+- Render will automatically bind to `PORT` and serve the platform.
+
+---
+
 ## 💡 Usage Highlights
 
 1. **Navigating Modules**: Use the left sidebar to navigate between **Overview**, **Regulatory Assistant**, **Document Intelligence**, **Label Validator**, **Recall Prediction**, and **Voice Agent**.

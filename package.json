@@ -1,0 +1,16 @@
+{
+  "name": "safefood-ai",
+  "version": "1.0.0",
+  "description": "Food Safety Compliance & Recall Prediction Platform",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "food-safety",
+    "fssai",
+    "ai-compliance"
+  ],
+  "author": "",
+  "license": "MIT"
+}
