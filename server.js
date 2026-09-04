@@ -20,7 +20,28 @@ const MIME_TYPES = {
 };
 
 const server = http.createServer((req, res) => {
-  let safePath = path.normalize(req.url.split('?')[0]);
+  const urlPath = req.url.split('?')[0];
+
+  // Health check endpoint for UptimeRobot / monitoring
+  if (urlPath === '/health' || urlPath === '/ping') {
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache'
+    });
+    if (req.method === 'HEAD') {
+      res.end();
+    } else {
+      res.end(JSON.stringify({
+        status: 'ok',
+        service: 'SafeFood AI',
+        uptime: Math.floor(process.uptime()),
+        timestamp: new Date().toISOString()
+      }));
+    }
+    return;
+  }
+
+  let safePath = path.normalize(urlPath);
   if (safePath === '/' || safePath === '') {
     safePath = '/index.html';
   }
