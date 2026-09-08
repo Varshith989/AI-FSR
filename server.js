@@ -41,24 +41,24 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  let safePath = path.normalize(urlPath);
-  if (safePath === '/' || safePath === '') {
-    safePath = '/index.html';
-  }
+  const filePath = path.resolve(__dirname, '.' + urlPath);
 
-  const filePath = path.join(__dirname, safePath);
-
-  // Security check: ensure filePath starts with __dirname
-  if (!filePath.startsWith(__dirname)) {
+  // Security check: ensure filePath stays within __dirname
+  if (!filePath.startsWith(__dirname + path.sep) && filePath !== __dirname) {
     res.writeHead(403, { 'Content-Type': 'text/plain' });
     res.end('403 Forbidden');
     return;
   }
 
-  const ext = path.extname(filePath).toLowerCase();
+  // Serve index.html for root
+  const finalPath = (urlPath === '/' || urlPath === '') 
+    ? path.join(__dirname, 'index.html') 
+    : filePath;
+
+  const ext = path.extname(finalPath).toLowerCase();
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
-  fs.readFile(filePath, (err, content) => {
+  fs.readFile(finalPath, (err, content) => {
     if (err) {
       if (err.code === 'ENOENT') {
         // Fallback to index.html

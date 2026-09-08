@@ -1,9 +1,14 @@
 services:
-  - type: static
+  - type: web
     name: safefood-ai
-    buildCommand: ""
-    publishPath: .
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        generateValue: false
+        value: "10000"
