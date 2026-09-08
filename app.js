@@ -72,12 +72,39 @@ document.addEventListener('DOMContentLoaded', () => {
     const chipBtns = document.querySelectorAll('.chip-btn');
 
     const botResponses = {
-        'default': 'According to FSSAI guidelines, compliance depends on your business scale. For general hygiene under Schedule 4, you must maintain clean surfaces, record temperatures, and procure raw materials only from FSSAI-licensed vendors. Can you specify your question?',
-        'dairy': 'FSSAI packaging rules mandate that pasteurized milk must be stored below 4°C at all times. The shelf life of pasteurized milk is typically 2-3 days under refrigeration, while UHT milk in aseptic cartons can be stored for up to 90 days without refrigeration until opened.',
-        'distributor': 'Food distributors must acquire an FSSAI State License if their annual turnover is between ₹12 Lakhs and ₹20 Crores. If turnover exceeds ₹20 Crores, or if importing/exporting food, a Central License is mandatory. The license number must be printed on all invoices.',
-        'jaivik': 'Yes, all organic food packages in India must carry the "Jaivik Bharat" organic logo alongside the FSSAI license number. Exemptions are granted only for direct sales by small organic producers to end consumers (turnover up to ₹12 Lakhs).',
-        'allergen': 'Under Food Safety Standards (Labelling and Display) Regulations 2020, mandatory allergen declarations are required for 8 categories: 1. Cereals containing Gluten, 2. Crustaceans, 3. Eggs, 4. Fish, 5. Peanuts/Tree Nuts, 6. Soybeans, 7. Milk, 8. Sulphite (in conc. > 10mg/kg). They must be highlighted in the ingredient list.'
+        'greeting': 'Hi! 👋 Welcome to SafeFood AI. How can I help you with food safety or FSSAI compliance today?',
+        'default': 'I can help you with FSSAI licensing, hygiene requirements, labeling, packaging, and audit preparation. What would you like to know?',
+        'dairy': 'Under FSSAI rules, pasteurized milk must always be kept refrigerated below 4°C and usually lasts 2 to 3 days. UHT milk in sealed cartons can be stored at room temperature for up to 90 days until opened. Once opened, it must be refrigerated and used within a few days.',
+        'distributor': 'Food distributors need an FSSAI State License if their yearly turnover is between ₹12 Lakhs and ₹20 Crores. If turnover is above ₹20 Crores or involves import or export, a Central License is needed. You must also display your 14-digit FSSAI license number on all invoices and bills.',
+        'jaivik': 'Jaivik Bharat is the official logo used in India for certified organic food products. If you package or sell organic food, you must display both the Jaivik Bharat logo and your FSSAI license number on the pack. Small organic farmers selling directly to customers with turnover under ₹12 Lakhs are exempt.',
+        'allergen': 'FSSAI requires packaged foods to clearly declare common food allergens in the ingredients list. The main ones include gluten, milk, eggs, fish, peanuts, tree nuts, soybeans, crustaceans, and sulphites. If your product contains any of these, they must be clearly mentioned on the label.'
     };
+
+    function isGreeting(text) {
+        if (!text) return false;
+        const clean = text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+        const exactGreetings = new Set([
+            'hi', 'hello', 'hey', 'hiya', 'howdy', 'namaste', 'greetings', 'yo',
+            'good morning', 'good afternoon', 'good evening', 'good day', 'good night',
+            'hi there', 'hello there', 'hey there', 'hi safefood', 'hello safefood'
+        ]);
+        if (exactGreetings.has(clean)) return true;
+        return /^(hi|hello|hey|hiya|howdy|namaste|greetings)\s+(there|safefood|bot|assistant|team)?$/.test(clean);
+    }
+
+    function cleanChatMessage(text) {
+        if (!text) return '';
+        let cleaned = text;
+        cleaned = cleaned.replace(/\*\*([^*]+)\*\*/g, '$1');
+        cleaned = cleaned.replace(/__([^_]+)__/g, '$1');
+        cleaned = cleaned.replace(/^#{1,6}\s+/gm, '');
+        cleaned = cleaned.replace(/^\s*--+\s*/gm, '');
+        cleaned = cleaned.replace(/\s*--+\s*/g, ' ');
+        cleaned = cleaned.replace(/^[\*\-]\s+/gm, '');
+        cleaned = cleaned.replace(/`([^`]+)`/g, '$1');
+        cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim();
+        return cleaned;
+    }
 
     function appendMessage(sender, text) {
         const messageDiv = document.createElement('div');
@@ -91,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
         bubble.className = 'msg-bubble';
         
         const p = document.createElement('p');
-        p.textContent = text;
+        p.textContent = sender === 'bot' ? cleanChatMessage(text) : text;
         
         const time = document.createElement('div');
         time.className = 'msg-time';
@@ -108,6 +135,129 @@ document.addEventListener('DOMContentLoaded', () => {
         return messageDiv;
     }
 
+    function getFSSAIAnswer(query) {
+        if (!query) return 'I can help you with FSSAI licensing, hygiene requirements, labeling, packaging, and audit preparation. What would you like to know?';
+
+        if (isGreeting(query)) {
+            return botResponses.greeting;
+        }
+
+        const q = query.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+
+        // 1. Schedule 4 (prioritized before general FSSAI checks)
+        if (q.includes('schedule 4') || q.includes('schedule iv') || q.includes('schedule four') || q.includes('schedule4')) {
+            if (q.includes('part') || q.includes('detail') || q.includes('more') || q.includes('breakdown') || q.includes('structure') || q.includes('types')) {
+                return 'Schedule 4 is divided into five parts based on the type of food business:\n\nPart 1: General hygienic and sanitary practices for petty food businesses.\n\nPart 2: General requirements for all food manufacturing and processing units.\n\nPart 3: Specific hygiene requirements for dairy and milk processing.\n\nPart 4: Specific hygiene requirements for meat and poultry processing.\n\nPart 5: Specific hygiene requirements for catering, food service, and restaurants.\n\nWould you like a specific hygiene checklist for your business?';
+            }
+            return 'Schedule 4 under FSSAI is the official set of sanitary and hygiene requirements that all food businesses in India must follow.\n\nIt covers basic rules for keeping cooking areas and premises clean, using potable water, ensuring personal hygiene for staff (such as wearing clean aprons and hairnets), maintaining safe food storage temperatures, and preventing pest contamination.';
+        }
+
+        // 2. What is FSSAI (with or without why required)
+        if (
+            q.includes('what is fssai') || q.includes('explain fssai') || q.includes('meaning of fssai') ||
+            q.includes('fssai stand for') || q.includes('full form of fssai') || q.includes('who is fssai') ||
+            q.includes('about fssai') || q.includes('definition of fssai') || q === 'fssai' ||
+            q.startsWith('what is fssai') || q.startsWith('what does fssai')
+        ) {
+            if (q.includes('why') || q.includes('require') || q.includes('need') || q.includes('purpose') || q.includes('importance')) {
+                return 'FSSAI stands for the Food Safety and Standards Authority of India. It is the authority that regulates food safety in India and helps ensure that food businesses follow required safety and quality standards.\n\nFSSAI registration or licensing is required for eligible food businesses so they can legally operate and show that they meet food safety requirements.';
+            }
+            return 'FSSAI stands for the Food Safety and Standards Authority of India. It is the authority that regulates food safety in India and helps ensure that food businesses follow required safety and quality standards.';
+        }
+
+        // 3. Hygiene & Kitchen cleanliness
+        if (
+            q.includes('hygiene') || q.includes('sanitary') || q.includes('cleanliness') ||
+            q.includes('sanitation') || q.includes('kitchen')
+        ) {
+            return 'Food businesses in India need to follow basic hygiene practices to keep food safe:\n\nKeep kitchen surfaces, cooking utensils, and storage areas clean and sanitized.\n\nUse clean drinking water for all cooking, cleaning, and ice.\n\nEnsure staff wear clean aprons, hairnets, and gloves, wash hands regularly, and stay home if unwell.\n\nStore raw and cooked foods separately, and keep chilled foods below 4°C and frozen foods below -18°C.\n\nWould you like a detailed hygiene checklist for your specific type of business?';
+        }
+
+        // 4. How do I prepare for an FSSAI audit / inspection
+        if (
+            q.includes('audit') || q.includes('inspection') || q.includes('prepare for audit') ||
+            q.includes('pass audit') || q.includes('auditor') || q.includes('audit preparation')
+        ) {
+            return 'To prepare for an FSSAI inspection or audit, here are three main things to check:\n\nDocuments: Keep your FSSAI license displayed, along with recent water test reports, pest control records, staff health checkups, and purchase bills for raw materials.\n\nCleanliness: Make sure cooking and prep areas are clean, pest screens are working, waste bins have lids, and hand-washing stations have soap.\n\nStaff: Ensure your team wears clean hairnets and aprons, checks fridge temperatures daily, and that your trained Food Safety Supervisor is available.\n\nLet me know if you would like me to generate a complete audit checklist for your business.';
+        }
+
+        // 5. Which FSSAI license do I need / license categories / eligibility
+        if (
+            q.includes('which fssai license') || q.includes('which license') || q.includes('what license') ||
+            q.includes('license do i need') || q.includes('type of license') || q.includes('types of license') ||
+            q.includes('license categories') || q.includes('basic vs state') || q.includes('state or central') ||
+            q.includes('license eligibility') || q.includes('which authorization')
+        ) {
+            return 'The type of license you need depends mostly on your business size and annual turnover:\n\nBasic Registration: For small businesses, street vendors, and startups with an annual turnover of up to ₹12 Lakhs.\n\nState License: For medium-sized food businesses, restaurants, and cloud kitchens with an annual turnover between ₹12 Lakhs and ₹20 Crores.\n\nCentral License: For large food businesses earning over ₹20 Crores, or businesses operating across multiple states, importing, or exporting food.\n\nWhat kind of food business do you run, and what is your approximate turnover? I can help you find the exact license you need.';
+        }
+
+        // 6. Why do I need an FSSAI license / why is it required
+        if (
+            q.includes('why do i need') || q.includes('why is license') || q.includes('why licensing') ||
+            (q.includes('why') && (q.includes('license') || q.includes('licence') || q.includes('registration') || q.includes('register'))) ||
+            q.includes('benefits of license') || q.includes('benefits of fssai') || q.includes('is license mandatory') ||
+            q.includes('penalty without')
+        ) {
+            return 'You need an FSSAI license because it is legally required for any food business in India, whether you run a restaurant, cloud kitchen, food stall, or packaged food brand.\n\nHaving a license allows you to legally operate, list on platforms like Swiggy and Zomato, build trust with your customers, and avoid legal penalties.';
+        }
+
+        // 6. Dairy and Milk shelf life / storage
+        if (q.includes('dairy') || q.includes('milk') || q.includes('shelf life') || q.includes('curd') || q.includes('paneer') || q.includes('cheese')) {
+            return botResponses.dairy;
+        }
+
+        // 7. Food distributor / wholesaler / warehouse
+        if (q.includes('distributor') || q.includes('wholesale') || q.includes('wholesaler') || q.includes('warehouse') || q.includes('transport')) {
+            return botResponses.distributor;
+        }
+
+        // 8. Jaivik Bharat / Organic food
+        if (q.includes('jaivik') || q.includes('organic') || q.includes('npop') || q.includes('pgs')) {
+            return botResponses.jaivik;
+        }
+
+        // 9. Allergen declarations
+        if (q.includes('allergen') || q.includes('allergy') || q.includes('allergens') || q.includes('mandatory warning')) {
+            return botResponses.allergen;
+        }
+
+        // 10. Labeling and packaging rules
+        if (q.includes('label') || q.includes('packaging') || q.includes('ingredients list') || q.includes('veg non veg')) {
+            return 'Every packaged food product in India must have a clear label showing: the product name, ingredients list, nutrition facts, veg or non-veg green/brown dot, manufacturing and expiry dates, net weight, manufacturer name and address, and the FSSAI logo with your 14-digit license number.';
+        }
+
+        // 11. How to apply / FoSCoS portal
+        if (q.includes('how to apply') || q.includes('application process') || q.includes('how to get') || q.includes('foscos') || q.includes('apply for license') || q.includes('register online')) {
+            return 'You can apply for an FSSAI license online through the official FoSCoS website (foscos.fssai.gov.in). You simply create an account, select your state and food business category, upload your ID and business address proof, pay the government fee, and submit the application.';
+        }
+
+        // 12. FoSTaC
+        if (q.includes('fostac') || q.includes('food safety supervisor') || q.includes('training')) {
+            return 'FoSTaC is an FSSAI training program that requires food businesses to have at least one trained and certified Food Safety Supervisor for every 25 food handlers. This ensures your staff knows proper hygiene, cleaning, and safe food handling practices.';
+        }
+
+        // 13. Food Recall
+        if (q.includes('recall') || q.includes('unsafe food') || q.includes('adulteration')) {
+            return 'If a food product is found to be unsafe or contaminated, the business must stop selling it immediately, inform FSSAI authorities within 24 hours, notify consumers, and pull the affected batch from shelves until the issue is resolved.';
+        }
+
+        // 14. What is FSSAI (and why is it required) - only when specifically asking about FSSAI entity
+        if (
+            q.includes('what is fssai') || q.includes('explain fssai') || q.includes('meaning of fssai') ||
+            q.includes('fssai stand for') || q.includes('full form of fssai') || q.includes('who is fssai') ||
+            q.includes('about fssai') || q.includes('definition of fssai') || q === 'fssai' ||
+            q.startsWith('what is fssai') || q.startsWith('what does fssai')
+        ) {
+            if (q.includes('why') || q.includes('require') || q.includes('need') || q.includes('purpose') || q.includes('importance')) {
+                return 'FSSAI stands for the Food Safety and Standards Authority of India. It is the authority that regulates food safety in India and helps ensure that food businesses follow required safety and quality standards.\n\nFSSAI registration or licensing is required for eligible food businesses so they can legally operate and show that they meet food safety requirements.';
+            }
+            return 'FSSAI stands for the Food Safety and Standards Authority of India. It is the authority that regulates food safety in India and helps ensure that food businesses follow required safety and quality standards.';
+        }
+
+        // 15. Unclear / ambiguous query fallback
+        return 'I can help you with FSSAI licensing, hygiene requirements, labeling, packaging, and audit preparation. What would you like to know?';
+    }
+
     async function handleChatSubmit(query) {
         if (!query.trim()) return;
         
@@ -115,7 +265,8 @@ document.addEventListener('DOMContentLoaded', () => {
         chatInput.value = '';
         
         // Show typing indicator while waiting
-        const typingIndicator = appendMessage('bot', '⏳ Consulting FSSAI regulations...');
+        const indicatorText = isGreeting(query) ? '💬 SafeFood AI is typing...' : '⏳ Consulting FSSAI regulations...';
+        const typingIndicator = appendMessage('bot', indicatorText);
         typingIndicator.classList.add('typing-indicator-placeholder');
 
         try {
@@ -134,20 +285,9 @@ document.addEventListener('DOMContentLoaded', () => {
             appendMessage('bot', data.reply);
 
         } catch (err) {
-            // Network or server error — use local keyword fallback
+            // Network or server error — use local intent fallback
             typingIndicator.remove();
-            const cleanQuery = query.toLowerCase();
-            let responseText = botResponses.default;
-            if (cleanQuery.includes('dairy') || cleanQuery.includes('shelf life') || cleanQuery.includes('milk')) {
-                responseText = botResponses.dairy;
-            } else if (cleanQuery.includes('distributor') || cleanQuery.includes('license') || cleanQuery.includes('turnover')) {
-                responseText = botResponses.distributor;
-            } else if (cleanQuery.includes('jaivik') || cleanQuery.includes('organic') || cleanQuery.includes('logo')) {
-                responseText = botResponses.jaivik;
-            } else if (cleanQuery.includes('allergen') || cleanQuery.includes('warning') || cleanQuery.includes('mandatory')) {
-                responseText = botResponses.allergen;
-            }
-            appendMessage('bot', responseText);
+            appendMessage('bot', getFSSAIAnswer(query));
         }
     }
 
