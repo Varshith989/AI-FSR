@@ -108,8 +108,25 @@ STRICT RULES:
 8. CATEGORY VARIATION: If a legal requirement varies across business categories, explicitly state this and ask for the relevant business details.
 9. CONVERSATIONAL & PROFESSIONAL: Maintain a clear, helpful, expert tone. Avoid dense legalese or formal document drafting style.
 10. NO BOILERPLATE DISCLAIMERS: Do not append generic disclaimers (e.g., "Consult a lawyer", "This is for informational purposes only").
-11. EXACT CHECKLIST COUNTS: When asked for a checklist with a specific number of items, return exactly that number of items.
-12. INDIAN REGULATORY CONTEXT ONLY: Strictly adhere to FSSAI standards and the Food Safety and Standards Act, 2006.`;
+11. CHECKLIST FORMAT & COUNTS: When asked for an audit checklist or a specific number of items, format each checklist item with a '☐ ' checkbox, return EXACTLY the requested number of items (no more, no less), ensure every item is an actionable audit point, and cite the relevant regulation/section where reliably known.
+12. DOCUMENT LISTS: When listing required documents, clearly distinguish between basic universal documents (e.g., Photo ID, premises proof) and category-specific requirements (e.g., layout plan, water test report, FSMS plan, list of directors) that depend on the license tier.
+13. INDIAN REGULATORY CONTEXT ONLY: Strictly adhere to FSSAI standards and the Food Safety and Standards Act, 2006.`;
+
+const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-3.6-flash'];
+
+async function callGemini(contents) {
+    if (!genAI) return null;
+    for (const modelName of GEMINI_MODELS) {
+        try {
+            const model = genAI.getGenerativeModel({ model: modelName });
+            const result = await model.generateContent(contents);
+            return result.response.text();
+        } catch (err) {
+            console.error(`[Gemini Error - ${modelName}]`, err.message);
+        }
+    }
+    return null;
+}
 
 // -------------------------------------------------------
 // API Route Handlers
@@ -126,16 +143,11 @@ async function handleRegulatoryChat(req, res) {
 
     // Use Gemini if available
     if (genAI) {
-        try {
-            const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
-            const result = await model.generateContent([
-                { text: FSSAI_SYSTEM_PROMPT + '\n\nUser question: ' + query }
-            ]);
-            const reply = result.response.text();
+        const reply = await callGemini([
+            { text: FSSAI_SYSTEM_PROMPT + '\n\nUser question: ' + query }
+        ]);
+        if (reply) {
             return sendJSON(res, 200, { reply, source: 'ai' });
-        } catch (err) {
-            console.error('[Gemini Chat Error]', err.message);
-            // Fall through to local fallback
         }
     }
 
@@ -153,9 +165,7 @@ async function handleGenerateChecklist(req, res) {
     const businessType = (body.businessType || 'restaurant').trim();
 
     if (genAI) {
-        try {
-            const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
-            const prompt = `${FSSAI_SYSTEM_PROMPT}
+        const prompt = `${FSSAI_SYSTEM_PROMPT}
 
 Generate exactly 10 FSSAI audit checklist items for a "${businessType}" food business in India.
 Return ONLY a valid JSON array (no markdown, no explanation) in this exact format:
@@ -165,16 +175,19 @@ Return ONLY a valid JSON array (no markdown, no explanation) in this exact forma
 ]
 Make items specific, practical, and directly verifiable during a physical audit.`;
 
-            const result = await model.generateContent([{ text: prompt }]);
-            let raw = result.response.text().trim();
-            // Strip markdown code fences if present
-            raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
-            const items = JSON.parse(raw);
-            if (Array.isArray(items) && items.length > 0) {
-                return sendJSON(res, 200, { items, source: 'ai' });
+        const reply = await callGemini([{ text: prompt }]);
+        if (reply) {
+            try {
+                let raw = reply.trim();
+                // Strip markdown code fences if present
+                raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+                const items = JSON.parse(raw);
+                if (Array.isArray(items) && items.length > 0) {
+                    return sendJSON(res, 200, { items, source: 'ai' });
+                }
+            } catch (err) {
+                console.error('[Gemini Checklist Error]', err.message);
             }
-        } catch (err) {
-            console.error('[Gemini Checklist Error]', err.message);
         }
     }
 
@@ -202,8 +215,6 @@ async function handleValidateLabel(req, res) {
         }
 
         try {
-            const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
-
             const imageBase64 = req.file.buffer.toString('base64');
             const mimeType = req.file.mimetype;
 
@@ -254,12 +265,16 @@ Validation rules to apply:
 - Infant food must state "Use only under medical advice"
 - Red/green/brown dot (veg/non-veg marker) required`;
 
-            const result = await model.generateContent([
+            const reply = await callGemini([
                 { text: prompt },
                 { inlineData: { mimeType, data: imageBase64 } }
             ]);
 
-            let raw = result.response.text().trim();
+            if (!reply) {
+                return sendJSON(res, 200, { source: 'fallback', message: 'Label scan fallback' });
+            }
+
+            let raw = reply.trim();
             raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
 
             const report = JSON.parse(raw);
