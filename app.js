@@ -108,24 +108,36 @@ document.addEventListener('DOMContentLoaded', () => {
         return messageDiv;
     }
 
-    function handleChatSubmit(query) {
+    async function handleChatSubmit(query) {
         if (!query.trim()) return;
         
         appendMessage('user', query);
         chatInput.value = '';
         
-        // Typing indicator
-        const typingIndicator = appendMessage('bot', 'AI is thinking...');
+        // Show typing indicator while waiting
+        const typingIndicator = appendMessage('bot', '⏳ Consulting FSSAI regulations...');
         typingIndicator.classList.add('typing-indicator-placeholder');
-        
-        setTimeout(() => {
-            // Remove typing indicator
+
+        try {
+            // Call the backend AI route
+            const response = await fetch('/api/regulatory-chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+
             typingIndicator.remove();
-            
-            // Match response
-            let responseText = botResponses.default;
+
+            if (!response.ok) throw new Error('Server error: ' + response.status);
+
+            const data = await response.json();
+            appendMessage('bot', data.reply);
+
+        } catch (err) {
+            // Network or server error — use local keyword fallback
+            typingIndicator.remove();
             const cleanQuery = query.toLowerCase();
-            
+            let responseText = botResponses.default;
             if (cleanQuery.includes('dairy') || cleanQuery.includes('shelf life') || cleanQuery.includes('milk')) {
                 responseText = botResponses.dairy;
             } else if (cleanQuery.includes('distributor') || cleanQuery.includes('license') || cleanQuery.includes('turnover')) {
@@ -135,9 +147,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (cleanQuery.includes('allergen') || cleanQuery.includes('warning') || cleanQuery.includes('mandatory')) {
                 responseText = botResponses.allergen;
             }
-            
             appendMessage('bot', responseText);
-        }, 1000);
+        }
     }
 
     chatForm.addEventListener('submit', (e) => {
@@ -229,50 +240,68 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    btnGenerateChecklist.addEventListener('click', () => {
-        const type = businessSelect.value;
-        const items = checklistData[type];
-        
+    function renderChecklistItems(items) {
         checklistItems.innerHTML = '';
-        
         items.forEach(item => {
             const div = document.createElement('div');
             div.className = 'checklist-item';
-            
+
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.id = item.id;
-            
+
             const content = document.createElement('div');
             content.className = 'checklist-item-content';
-            
+
             const title = document.createElement('span');
             title.className = 'checklist-item-title';
             title.textContent = item.text;
-            
+
             const clause = document.createElement('span');
             clause.className = 'checklist-item-clause';
             clause.textContent = `FSSAI Code: ${item.clause}`;
-            
+
             content.appendChild(title);
             content.appendChild(clause);
             div.appendChild(checkbox);
             div.appendChild(content);
-            
-            // Allow clicking item container to check the box
+
             div.addEventListener('click', (e) => {
                 if (e.target !== checkbox) {
                     checkbox.checked = !checkbox.checked;
                     checkbox.dispatchEvent(new Event('change'));
                 }
             });
-            
             checkbox.addEventListener('change', updateChecklistProgress);
-            
             checklistItems.appendChild(div);
         });
-        
         updateChecklistProgress();
+    }
+
+    btnGenerateChecklist.addEventListener('click', async () => {
+        const type = businessSelect.value;
+        const staticItems = checklistData[type];
+
+        // Optimistically render static items immediately for instant feedback
+        renderChecklistItems(staticItems);
+
+        // Also request AI-generated items in the background
+        try {
+            const response = await fetch('/api/generate-checklist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ businessType: type })
+            });
+            if (response.ok) {
+                const data = await response.json();
+                // If AI returned real items, swap them in
+                if (data.source === 'ai' && Array.isArray(data.items) && data.items.length > 0) {
+                    renderChecklistItems(data.items);
+                }
+            }
+        } catch (err) {
+            // Network error — static items already rendered, nothing to do
+        }
     });
 
     // Modal Control
@@ -601,7 +630,7 @@ Scope: Mixing Vats & Handwash Stations
     const scanLaser = document.getElementById('scan-laser');
     const scanningOverlay = document.getElementById('scanning-overlay');
     const scannerWindow = document.getElementById('scanner-window');
-    
+
     // Report Elements
     const labelBadge = document.getElementById('label-overall-badge');
     const labelAuditBody = document.getElementById('label-audit-body');
@@ -609,6 +638,56 @@ Scope: Mixing Vats & Handwash Stations
     const ingredientWarningsContainer = document.getElementById('ingredient-warnings-container');
     const mandatoryWarningsBox = document.getElementById('mandatory-warnings-box');
     const complianceVerdictBox = document.getElementById('compliance-verdict-box');
+
+    // Hidden file input for real image uploads (wired to scanner window click)
+    let uploadedImageFile = null;  // holds File object when user uploads
+    let uploadedImageBase64 = null; // holds data URL for preview
+
+    const labelFileInput = document.createElement('input');
+    labelFileInput.type = 'file';
+    labelFileInput.accept = 'image/*';
+    labelFileInput.style.display = 'none';
+    document.body.appendChild(labelFileInput);
+
+    // Upload trigger hint text (appended to scanner window)
+    const uploadHint = document.createElement('div');
+    uploadHint.className = 'label-upload-hint';
+    uploadHint.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Click to upload your own label image';
+    uploadHint.style.cssText = 'position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.55);color:#fff;font-size:0.7rem;padding:4px 10px;border-radius:20px;pointer-events:none;white-space:nowrap;z-index:10;';
+    scannerWindow.style.position = 'relative';
+    scannerWindow.appendChild(uploadHint);
+
+    // Clicking the scanner window opens file picker
+    scannerWindow.style.cursor = 'pointer';
+    scannerWindow.addEventListener('click', (e) => {
+        // Don't trigger if clicking the scan button itself
+        if (e.target.closest('#btn-start-scan')) return;
+        labelFileInput.click();
+    });
+
+    // Handle file selection
+    labelFileInput.addEventListener('change', () => {
+        const file = labelFileInput.files[0];
+        if (!file) return;
+
+        uploadedImageFile = file;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            uploadedImageBase64 = e.target.result;
+            // Show preview in scanner window, replacing mock label graphic
+            labelImageDisplay.innerHTML = `<img src="${uploadedImageBase64}" alt="Uploaded label" style="width:100%;height:100%;object-fit:contain;border-radius:6px;">`;
+            // Reset report to awaiting scan state
+            labelBadge.textContent = 'Ready to Scan';
+            labelBadge.className = 'badge badge-orange-glow';
+            nutriPillsContainer.innerHTML = '';
+            ingredientWarningsContainer.innerHTML = '';
+            mandatoryWarningsBox.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Image loaded. Click "Scan Label & Validate Ingredients" to analyse.';
+            complianceVerdictBox.className = 'hidden';
+        };
+        reader.readAsDataURL(file);
+        // Reset input so same file can be re-selected
+        labelFileInput.value = '';
+    });
 
     const products = {
         'energy-drink': {
@@ -729,7 +808,11 @@ Scope: Mixing Vats & Handwash Stations
     function updateLabelGraphic() {
         const prodKey = productSelect.value;
         labelImageDisplay.innerHTML = products[prodKey].labelHTML;
-        
+
+        // Clear any uploaded image — dropdown change resets to sample mode
+        uploadedImageFile = null;
+        uploadedImageBase64 = null;
+
         // Reset analysis reports
         labelBadge.textContent = 'Awaiting Scan';
         labelBadge.className = 'badge badge-secondary';
@@ -742,59 +825,104 @@ Scope: Mixing Vats & Handwash Stations
     productSelect.addEventListener('change', updateLabelGraphic);
     updateLabelGraphic(); // init initial label
 
-    btnStartScan.addEventListener('click', () => {
-        const prodKey = productSelect.value;
-        const prodData = products[prodKey];
+    /** Render label audit report from a data object (same shape as products[x]) */
+    function renderLabelReport(prodData) {
+        // Overall badge
+        labelBadge.textContent = prodData.overallBadge.text;
+        labelBadge.className = prodData.overallBadge.class;
 
-        // Animate Scan
+        // Nutrition pills
+        nutriPillsContainer.innerHTML = '';
+        prodData.nutriPills.forEach(pill => {
+            const span = document.createElement('span');
+            span.className = `nutri-pill ${pill.class}`;
+            span.innerHTML = pill.class === 'pass'
+                ? `<i class="fa-solid fa-circle-check"></i> ${pill.text}`
+                : `<i class="fa-solid fa-triangle-exclamation"></i> ${pill.text}`;
+            nutriPillsContainer.appendChild(span);
+        });
+
+        // Ingredient / allergen warnings
+        ingredientWarningsContainer.innerHTML = '';
+        prodData.warnings.forEach(warn => {
+            const div = document.createElement('div');
+            div.className = `warning-item ${warn.class}`;
+            div.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> <span>${warn.text}</span>`;
+            ingredientWarningsContainer.appendChild(div);
+        });
+
+        // Mandatory warnings box
+        mandatoryWarningsBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-warning"></i> <span>${prodData.mandatory}</span>`;
+
+        // Compliance verdict
+        complianceVerdictBox.className = `compliance-verdict-box ${prodData.verdict.class}`;
+        complianceVerdictBox.innerHTML = `
+            <div class="verdict-icon">${prodData.verdict.icon}</div>
+            <div class="verdict-info">
+                <span class="verdict-title">${prodData.verdict.title}</span>
+                <span class="verdict-desc">${prodData.verdict.desc}</span>
+            </div>
+        `;
+    }
+
+    btnStartScan.addEventListener('click', async () => {
+        // Start scan animation
         scannerWindow.classList.add('scan-active');
         scanningOverlay.classList.remove('hidden');
         btnStartScan.disabled = true;
 
-        setTimeout(() => {
-            // Remove Scan Animation
-            scannerWindow.classList.remove('scan-active');
-            scanningOverlay.classList.add('hidden');
-            btnStartScan.disabled = false;
+        // ---- Path A: User uploaded a real image → send to AI ----
+        if (uploadedImageFile) {
+            scanningOverlay.querySelector('p').textContent = 'Running AI compliance analysis...';
 
-            // Populate Report
-            labelBadge.textContent = prodData.overallBadge.text;
-            labelBadge.className = prodData.overallBadge.class;
+            try {
+                const formData = new FormData();
+                formData.append('labelImage', uploadedImageFile);
 
-            // Nutri pills
-            nutriPillsContainer.innerHTML = '';
-            prodData.nutriPills.forEach(pill => {
-                const span = document.createElement('span');
-                span.className = `nutri-pill ${pill.class}`;
-                span.innerHTML = pill.class === 'pass' 
-                    ? `<i class="fa-solid fa-circle-check"></i> ${pill.text}`
-                    : `<i class="fa-solid fa-triangle-exclamation"></i> ${pill.text}`;
-                nutriPillsContainer.appendChild(span);
-            });
+                const response = await fetch('/api/validate-label', {
+                    method: 'POST',
+                    body: formData  // no Content-Type header — browser sets it with boundary
+                });
 
-            // Allergen Warnings
-            ingredientWarningsContainer.innerHTML = '';
-            prodData.warnings.forEach(warn => {
-                const div = document.createElement('div');
-                div.className = `warning-item ${warn.class}`;
-                div.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> <span>${warn.text}</span>`;
-                ingredientWarningsContainer.appendChild(div);
-            });
+                scannerWindow.classList.remove('scan-active');
+                scanningOverlay.classList.add('hidden');
+                scanningOverlay.querySelector('p').textContent = 'Extracting OCR labels...';
+                btnStartScan.disabled = false;
 
-            // Mandatory box
-            mandatoryWarningsBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-warning"></i> <span>${prodData.mandatory}</span>`;
+                const data = await response.json();
 
-            // Verdict
-            complianceVerdictBox.className = `compliance-verdict-box ${prodData.verdict.class}`;
-            complianceVerdictBox.innerHTML = `
-                <div class="verdict-icon">${prodData.verdict.icon}</div>
-                <div class="verdict-info">
-                    <span class="verdict-title">${prodData.verdict.title}</span>
-                    <span class="verdict-desc">${prodData.verdict.desc}</span>
-                </div>
-            `;
+                if (data.source === 'ai' && data.report) {
+                    // Render AI analysis results
+                    renderLabelReport(data.report);
+                } else if (data.source === 'fallback') {
+                    // No Gemini key — fall back to dropdown product data
+                    renderLabelReport(products[productSelect.value]);
+                    mandatoryWarningsBox.innerHTML += '<br><small style="color:var(--text-muted);">(AI key not configured — showing sample data)</small>';
+                } else {
+                    // API error
+                    labelBadge.textContent = 'Analysis Error';
+                    labelBadge.className = 'badge badge-danger-glow';
+                    nutriPillsContainer.innerHTML = `<span class="nutri-pill warn"><i class="fa-solid fa-triangle-exclamation"></i> AI analysis failed. ${data.error || ''}</span>`;
+                }
 
-        }, 2000);
+            } catch (err) {
+                scannerWindow.classList.remove('scan-active');
+                scanningOverlay.classList.add('hidden');
+                scanningOverlay.querySelector('p').textContent = 'Extracting OCR labels...';
+                btnStartScan.disabled = false;
+                // Network error — fall back to dropdown data
+                renderLabelReport(products[productSelect.value]);
+            }
+
+        } else {
+            // ---- Path B: No upload → use existing hardcoded dropdown data (original flow) ----
+            setTimeout(() => {
+                scannerWindow.classList.remove('scan-active');
+                scanningOverlay.classList.add('hidden');
+                btnStartScan.disabled = false;
+                renderLabelReport(products[productSelect.value]);
+            }, 2000);
+        }
     });
 
 
