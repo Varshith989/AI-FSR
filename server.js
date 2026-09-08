@@ -106,7 +106,7 @@ async function handleRegulatoryChat(req, res) {
     // Use Gemini if available
     if (genAI) {
         try {
-            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+            const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
             const result = await model.generateContent([
                 { text: FSSAI_SYSTEM_PROMPT + '\n\nUser question: ' + query }
             ]);
@@ -133,7 +133,7 @@ async function handleGenerateChecklist(req, res) {
 
     if (genAI) {
         try {
-            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+            const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
             const prompt = `${FSSAI_SYSTEM_PROMPT}
 
 Generate exactly 10 FSSAI audit checklist items for a "${businessType}" food business in India.
@@ -181,7 +181,7 @@ async function handleValidateLabel(req, res) {
         }
 
         try {
-            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+            const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
 
             const imageBase64 = req.file.buffer.toString('base64');
             const mimeType = req.file.mimetype;
