@@ -1,736 +1,650 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SafeFood AI - Food Safety Compliance & Recall Prediction Platform</title>
-    <!-- Google Fonts: Outfit (headings) & Inter (body) -->
+    <title>SafeFood AI — Food Safety Compliance & Recall Prediction</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="app-container">
-        <!-- Sidebar Navigation -->
-        <aside class="sidebar">
-            <div class="brand">
-                <div class="brand-icon">
-                    <i class="fa-solid fa-shield-halved"></i>
-                </div>
-                <div class="brand-text">
-                    <h2>SafeFood <span>AI</span></h2>
-                    <p>Compliance Engine</p>
-                </div>
-            </div>
-            
-            <nav class="nav-menu">
-                <a href="#" class="nav-item active" data-tab="dashboard">
-                    <i class="fa-solid fa-chart-line"></i>
-                    <span>Overview</span>
-                </a>
-                <a href="#" class="nav-item" data-tab="regulatory">
-                    <i class="fa-solid fa-gavel"></i>
-                    <span>Regulatory Assistant</span>
-                </a>
-                <a href="#" class="nav-item" data-tab="doc-intel">
-                    <i class="fa-solid fa-file-shield"></i>
-                    <span>Document Intelligence</span>
-                </a>
-                <a href="#" class="nav-item" data-tab="label-val">
-                    <i class="fa-solid fa-barcode"></i>
-                    <span>Label Validator</span>
-                </a>
-                <a href="#" class="nav-item" data-tab="recall-dash">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                    <span>Recall Prediction</span>
-                </a>
-                <a href="#" class="nav-item" data-tab="voice-agent">
-                    <i class="fa-solid fa-microphone-lines"></i>
-                    <span>Voice Agent</span>
-                </a>
-            </nav>
-            
-            <div class="sidebar-footer">
-                <div class="system-status">
-                    <div class="status-indicator online"></div>
-                    <div class="status-info">
-                        <p class="status-label">FSSAI DB Status</p>
-                        <p class="status-value">Synchronized (Live)</p>
-                    </div>
-                </div>
-            </div>
-        </aside>
 
-        <!-- Main Content Area -->
-        <main class="main-content">
-            <!-- Header -->
-            <header class="main-header">
+<!-- Mobile Sidebar Overlay -->
+<div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+
+<div class="app-container">
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
+        <div class="brand" aria-label="SafeFood AI">
+            <div class="brand-icon" aria-hidden="true"><i class="fa-solid fa-shield-halved"></i></div>
+            <div class="brand-text">
+                <h2>SafeFood <span>AI</span></h2>
+                <p>Compliance Engine</p>
+            </div>
+        </div>
+
+        <nav class="nav-menu" role="tablist" aria-label="Application modules">
+            <a href="#" class="nav-item active" role="tab" aria-selected="true"  aria-controls="tab-dashboard"  data-tab="dashboard"   tabindex="0">
+                <i class="fa-solid fa-chart-line" aria-hidden="true"></i><span>Overview</span>
+            </a>
+            <a href="#" class="nav-item" role="tab" aria-selected="false" aria-controls="tab-regulatory"  data-tab="regulatory"  tabindex="-1">
+                <i class="fa-solid fa-gavel" aria-hidden="true"></i><span>Regulatory Assistant</span>
+            </a>
+            <a href="#" class="nav-item" role="tab" aria-selected="false" aria-controls="tab-doc-intel"   data-tab="doc-intel"   tabindex="-1">
+                <i class="fa-solid fa-file-shield" aria-hidden="true"></i><span>Document Intelligence</span>
+            </a>
+            <a href="#" class="nav-item" role="tab" aria-selected="false" aria-controls="tab-label-val"   data-tab="label-val"   tabindex="-1">
+                <i class="fa-solid fa-barcode" aria-hidden="true"></i><span>Label Validator</span>
+            </a>
+            <a href="#" class="nav-item" role="tab" aria-selected="false" aria-controls="tab-recall-dash" data-tab="recall-dash" tabindex="-1">
+                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><span>Recall Prediction</span>
+            </a>
+            <a href="#" class="nav-item" role="tab" aria-selected="false" aria-controls="tab-voice-agent" data-tab="voice-agent" tabindex="-1">
+                <i class="fa-solid fa-microphone-lines" aria-hidden="true"></i><span>Voice Agent</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="system-status" role="status" aria-live="polite">
+                <div class="status-indicator online" aria-hidden="true"></div>
+                <div class="status-info">
+                    <p class="status-label">FSSAI DB Status</p>
+                    <p class="status-value">Synchronized (Live)</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content" id="main-content">
+
+        <!-- Header -->
+        <header class="main-header">
+            <div class="header-left">
+                <button class="hamburger-btn" id="hamburger-btn" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar">
+                    <i class="fa-solid fa-bars" aria-hidden="true"></i>
+                </button>
                 <div class="header-title">
                     <h1 id="page-title">Overview Dashboard</h1>
                     <p id="page-subtitle">Real-time enterprise compliance health index</p>
                 </div>
-                <div class="header-actions">
-                    <div class="compliance-score-badge">
-                        <div class="radial-progress" style="--value:94;">
-                            <span class="score-num">94%</span>
-                        </div>
-                        <div class="badge-info">
-                            <span class="badge-label">Compliance Index</span>
-                            <span class="badge-status-text text-success">Excellent</span>
-                        </div>
-                    </div>
-                    <div class="header-btn notifications-btn">
-                        <i class="fa-regular fa-bell"></i>
-                        <span class="notification-dot"></span>
-                        <!-- Dropdown panel -->
-                        <div class="notification-dropdown">
-                            <div class="notif-header">
-                                <h3>Alert Notifications</h3>
-                                <span class="mark-read">Mark all as read</span>
-                            </div>
-                            <div class="notif-list">
-                                <div class="notif-item unread">
-                                    <i class="fa-solid fa-triangle-exclamation text-danger"></i>
-                                    <div class="notif-content">
-                                        <p class="notif-title">Recall Risk Warning</p>
-                                        <p class="notif-desc">E. coli trace risk detected in supplier Batch B-402</p>
-                                        <span class="notif-time">2 mins ago</span>
-                                    </div>
-                                </div>
-                                <div class="notif-item">
-                                    <i class="fa-solid fa-circle-check text-success"></i>
-                                    <div class="notif-content">
-                                        <p class="notif-title">SOP Validation Approved</p>
-                                        <p class="notif-desc">SOP for Pest Control has been validated successfully</p>
-                                        <span class="notif-time">1 hour ago</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="user-profile">
-                        <div class="profile-avatar">QA</div>
-                        <div class="profile-info">
-                            <p class="user-name">Quality Director</p>
-                            <p class="user-role">FSSAI Certified Auditor</p>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            </div>
 
-            <!-- Content Screens -->
-            <div class="tab-container">
-                <!-- TAB 0: OVERVIEW -->
-                <div id="tab-dashboard" class="tab-content active">
-                    <div class="hero-section">
-                        <div class="hero-grid">
-                            <div class="hero-text-card">
-                                <h2>AI-Powered Food Safety Management</h2>
-                                <p>Ensure FSSAI compliance, validate documentation, audit labeling, predict recall risks, and manage operations in multiple languages with our integrated AI core.</p>
-                                <div class="hero-badges">
-                                    <span class="hero-badge"><i class="fa-solid fa-circle-check"></i> FSSAI Compliant</span>
-                                    <span class="hero-badge"><i class="fa-solid fa-bolt"></i> Real-time Prediction</span>
-                                    <span class="hero-badge"><i class="fa-solid fa-microphone"></i> Multi-lingual Voice AI</span>
-                                </div>
-                            </div>
-                            <div class="hero-stats-card">
-                                <div class="stat-circle-container">
-                                    <div class="radial-progress-lg" style="--value:94;">
-                                        <div class="inner-circle">
-                                            <span class="inner-title">Enterprise Score</span>
-                                            <span class="inner-value">94<small>/100</small></span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="stats-sub-row">
-                                    <div class="sub-stat-item">
-                                        <span class="sub-stat-num text-success">98%</span>
-                                        <span class="sub-stat-label">Label Checks Passed</span>
-                                    </div>
-                                    <div class="divider"></div>
-                                    <div class="sub-stat-item">
-                                        <span class="sub-stat-num text-warning">89%</span>
-                                        <span class="sub-stat-label">Audit Readiness</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+            <div class="header-actions">
+                <!-- Compliance Score -->
+                <div class="compliance-score-badge" aria-label="Compliance Index: 94% — Excellent">
+                    <div class="radial-progress" style="--value:94;" role="img" aria-label="94%">
+                        <span class="score-num">94%</span>
                     </div>
-
-                    <!-- Module Overview Grid -->
-                    <div class="section-header">
-                        <h2>Safety Core Modules</h2>
-                        <p>Access specialized AI sub-systems for regulatory auditing, risk control, and voice guidance</p>
-                    </div>
-
-                    <div class="module-cards-grid">
-                        <!-- Card 1 -->
-                        <div class="module-card" data-target="regulatory">
-                            <div class="card-glow"></div>
-                            <div class="card-icon gradient-purple">
-                                <i class="fa-solid fa-gavel"></i>
-                            </div>
-                            <h3>Regulatory Assistant</h3>
-                            <p>Automated FSSAI compliance advice, real-time query resolution, and audit checklist generation.</p>
-                            <span class="card-link">Launch Assistant <i class="fa-solid fa-arrow-right"></i></span>
-                        </div>
-                        <!-- Card 2 -->
-                        <div class="module-card" data-target="doc-intel">
-                            <div class="card-glow"></div>
-                            <div class="card-icon gradient-green">
-                                <i class="fa-solid fa-file-shield"></i>
-                            </div>
-                            <h3>Document Intelligence</h3>
-                            <p>Deep review of Standard Operating Procedures (SOPs) and HACCP plans to identify compliance gaps.</p>
-                            <span class="card-link">Review Documents <i class="fa-solid fa-arrow-right"></i></span>
-                        </div>
-                        <!-- Card 3 -->
-                        <div class="module-card" data-target="label-val">
-                            <div class="card-glow"></div>
-                            <div class="card-icon gradient-orange">
-                                <i class="fa-solid fa-barcode"></i>
-                            </div>
-                            <h3>Food Label Validator</h3>
-                            <p>Validate nutritional data and ingredient lists against regulatory warnings and allergen rules.</p>
-                            <span class="card-link">Scan Labels <i class="fa-solid fa-arrow-right"></i></span>
-                        </div>
-                        <!-- Card 4 -->
-                        <div class="module-card" data-target="recall-dash">
-                            <div class="card-glow"></div>
-                            <div class="card-icon gradient-red">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                            </div>
-                            <h3>Recall Prediction Dashboard</h3>
-                            <p>Predictive supplier risk scores, real-time contamination feeds, and corrective action workflows.</p>
-                            <span class="card-link">Open Dashboard <i class="fa-solid fa-arrow-right"></i></span>
-                        </div>
-                        <!-- Card 5 -->
-                        <div class="module-card" data-target="voice-agent">
-                            <div class="card-glow"></div>
-                            <div class="card-icon gradient-blue">
-                                <i class="fa-solid fa-microphone-lines"></i>
-                            </div>
-                            <h3>Multilingual Voice Agent</h3>
-                            <p>Auditor support through speech commands in English, Hindi, and Tamil for hands-free compliance checks.</p>
-                            <span class="card-link">Start Voice Agent <i class="fa-solid fa-arrow-right"></i></span>
-                        </div>
+                    <div class="badge-info">
+                        <span class="badge-label">Compliance Index</span>
+                        <span class="badge-status-text text-success">Excellent</span>
                     </div>
                 </div>
 
-                <!-- TAB 1: REGULATORY ASSISTANT -->
-                <div id="tab-regulatory" class="tab-content">
-                    <div class="grid-2col">
-                        <!-- Chatbot Section -->
-                        <div class="glass-panel chatbot-container">
-                            <div class="panel-header">
-                                <div class="header-icon-title">
-                                    <i class="fa-solid fa-robot text-purple"></i>
-                                    <h3>FSSAI Regulatory Chat Assistant</h3>
-                                </div>
-                                <span class="badge badge-purple-glow">FSSAI 2026 Ready</span>
-                            </div>
-                            
-                            <div class="chat-messages" id="chat-messages">
-                                <div class="message bot">
-                                    <div class="msg-avatar"><i class="fa-solid fa-robot"></i></div>
-                                    <div class="msg-bubble">
-                                        <p>Hello! I am your FSSAI Regulatory Assistant. Ask me anything about licensing, shelf-life regulations, packaging rules, or compliance standards.</p>
-                                        <div class="msg-time">Just now</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="chat-chips">
-                                <button class="chip-btn" data-query="What is the shelf life requirement for packaged dairy?">Dairy Shelf-life</button>
-                                <button class="chip-btn" data-query="What is the FSSAI license requirement for a food distributor?">Distributor License</button>
-                                <button class="chip-btn" data-query="Are organic food packages required to carry the Jaivik Bharat logo?">Jaivik Bharat Logo</button>
-                                <button class="chip-btn" data-query="What are the mandatory allergen warnings on food packaging?">Allergen Warnings</button>
-                            </div>
-                            
-                            <form class="chat-input-area" id="chat-form">
-                                <input type="text" id="chat-input" placeholder="Type a compliance query here (e.g. 'What is Jaivik Bharat?')..." required>
-                                <button type="submit" class="send-btn btn-purple"><i class="fa-solid fa-paper-plane"></i></button>
-                            </form>
+                <!-- Notifications -->
+                <div class="header-btn notifications-btn" id="notifications-btn" role="button" tabindex="0" aria-label="Notifications — 1 unread" aria-haspopup="true" aria-expanded="false">
+                    <i class="fa-regular fa-bell" aria-hidden="true"></i>
+                    <span class="notification-dot" id="notification-dot" aria-hidden="true"></span>
+                    <div class="notification-dropdown" id="notification-dropdown" role="dialog" aria-label="Notifications">
+                        <div class="notif-header">
+                            <h3>Alert Notifications</h3>
+                            <span class="mark-read" id="mark-all-read" role="button" tabindex="0">Mark all as read</span>
                         </div>
-
-                        <!-- Checklist Generator Section -->
-                        <div class="glass-panel checklist-container">
-                            <div class="panel-header">
-                                <div class="header-icon-title">
-                                    <i class="fa-solid fa-clipboard-list text-purple"></i>
-                                    <h3>Audit Readiness Checklist</h3>
-                                </div>
-                                <span class="badge badge-purple-glow">Compliance Verification</span>
-                            </div>
-                            
-                            <div class="checklist-config">
-                                <div class="input-group">
-                                    <label for="business-type">Select Business Category</label>
-                                    <div class="custom-select-wrapper">
-                                        <select id="business-type">
-                                            <option value="restaurant">Restaurant & Catering (FSSAI State/Central)</option>
-                                            <option value="manufacturing">Food Manufacturer & Processing Unit</option>
-                                            <option value="warehouse">Storage, Warehouse & Distribution Center</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <button class="btn btn-purple w-full" id="btn-generate-checklist">
-                                    <i class="fa-solid fa-rotate"></i> Generate Audit Checklist
-                                </button>
-                            </div>
-
-                            <div class="checklist-progress-bar">
-                                <div class="progress-info">
-                                    <span>Ticked Items: <strong id="checklist-count">0/10</strong></span>
-                                    <span>Completion: <strong id="checklist-percent">0%</strong></span>
-                                </div>
-                                <div class="progress-track">
-                                    <div class="progress-fill" id="checklist-progress-fill" style="width: 0%;"></div>
+                        <div class="notif-list" role="list">
+                            <div class="notif-item unread" role="listitem">
+                                <i class="fa-solid fa-triangle-exclamation text-danger" aria-hidden="true"></i>
+                                <div class="notif-content">
+                                    <p class="notif-title">Recall Risk Warning</p>
+                                    <p class="notif-desc">E. coli trace risk detected in supplier Batch B-402</p>
+                                    <span class="notif-time">2 mins ago</span>
                                 </div>
                             </div>
-
-                            <div class="checklist-items-scroll" id="checklist-items">
-                                <!-- Generated items go here -->
-                                <div class="empty-state">
-                                    <i class="fa-regular fa-clipboard"></i>
-                                    <p>Select business category and click generate checklist to start your compliance self-audit.</p>
-                                </div>
-                            </div>
-
-                            <div class="checklist-footer-actions hidden" id="checklist-actions">
-                                <button class="btn btn-secondary w-full" id="btn-export-audit">
-                                    <i class="fa-solid fa-file-pdf"></i> Export Compliance Audit Report
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TAB 2: DOCUMENT INTELLIGENCE -->
-                <div id="tab-doc-intel" class="tab-content">
-                    <div class="grid-2col-40-60">
-                        <!-- Left Panel: Upload and File View -->
-                        <div class="glass-panel">
-                            <div class="panel-header">
-                                <div class="header-icon-title">
-                                    <i class="fa-solid fa-file-import text-green"></i>
-                                    <h3>Document Input Pipeline</h3>
-                                </div>
-                            </div>
-
-                            <div class="doc-selector-group">
-                                <p class="section-label">Select Standard Template to Analyze</p>
-                                <div class="template-grid">
-                                    <button class="template-btn active" data-doc="pest-control">
-                                        <i class="fa-solid fa-bug"></i>
-                                        <span>Pest Control SOP</span>
-                                    </button>
-                                    <button class="template-btn" data-doc="cold-chain">
-                                        <i class="fa-solid fa-snowflake"></i>
-                                        <span>HACCP: Cold Chain</span>
-                                    </button>
-                                    <button class="template-btn" data-doc="hygiene">
-                                        <i class="fa-solid fa-soap"></i>
-                                        <span>Hygiene & Sanitization</span>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="upload-drag-zone" id="upload-zone">
-                                <i class="fa-solid fa-cloud-arrow-up"></i>
-                                <h4>Drag & drop standard PDF/Word document</h4>
-                                <p>or click to browse local files (simulated upload)</p>
-                                <input type="file" id="doc-file-input" class="hidden" accept=".pdf,.doc,.docx,.txt">
-                            </div>
-
-                            <div class="doc-viewer-card">
-                                <div class="viewer-header">
-                                    <span class="file-name" id="doc-title">Pest_Control_SOP_v2.txt</span>
-                                    <span class="file-size">4.2 KB</span>
-                                </div>
-                                <div class="viewer-body" id="doc-content-viewer">
-                                    <!-- Document Content displays here with highlights -->
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Right Panel: AI Validation Insights -->
-                        <div class="glass-panel">
-                            <div class="panel-header">
-                                <div class="header-icon-title">
-                                    <i class="fa-solid fa-magnifying-glass-chart text-green"></i>
-                                    <h3>AI Safety Compliance Analysis</h3>
-                                </div>
-                                <div class="compliance-badge" id="doc-compliance-badge">
-                                    <span class="compliance-score">82%</span> Score
-                                </div>
-                            </div>
-
-                            <!-- Processing State (hidden initially) -->
-                            <div class="analyzer-loading hidden" id="doc-analyzer-loading">
-                                <div class="spinner"></div>
-                                <p>Running NLP compliance scan & FSSAI cross-referencing...</p>
-                            </div>
-
-                            <!-- Results View -->
-                            <div class="analyzer-results" id="doc-analyzer-results">
-                                <div class="score-card-row">
-                                    <div class="score-sub-card">
-                                        <span class="score-card-title">HACCP Alignment</span>
-                                        <span class="score-card-val text-success" id="haccp-align">9/10</span>
-                                    </div>
-                                    <div class="score-sub-card">
-                                        <span class="score-card-title">FSSAI Schedule 4 Code</span>
-                                        <span class="score-card-val text-warning" id="fssai-align">Critical Gap</span>
-                                    </div>
-                                    <div class="score-sub-card">
-                                        <span class="score-card-title">Pest Risk Index</span>
-                                        <span class="score-card-val text-danger" id="risk-align">High Risk</span>
-                                    </div>
-                                </div>
-
-                                <div class="gap-analysis-section">
-                                    <h4><i class="fa-solid fa-triangle-exclamation text-danger"></i> Compliance Gaps & Missing Clauses</h4>
-                                    <ul class="gap-list" id="gap-list-items">
-                                        <!-- gaps -->
-                                    </ul>
-                                </div>
-
-                                <div class="corrections-section">
-                                    <h4><i class="fa-solid fa-pen-to-square text-success"></i> Auto-Generated Corrections</h4>
-                                    <div class="corrections-list" id="corrections-items">
-                                        <!-- recommendations -->
-                                    </div>
+                            <div class="notif-item" role="listitem">
+                                <i class="fa-solid fa-circle-check text-success" aria-hidden="true"></i>
+                                <div class="notif-content">
+                                    <p class="notif-title">SOP Validation Approved</p>
+                                    <p class="notif-desc">SOP for Pest Control has been validated successfully</p>
+                                    <span class="notif-time">1 hour ago</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- TAB 3: FOOD LABEL VALIDATOR -->
-                <div id="tab-label-val" class="tab-content">
-                    <div class="grid-2col-45-55">
-                        <!-- Left Panel: Label Scanner Simulator -->
-                        <div class="glass-panel">
-                            <div class="panel-header">
-                                <div class="header-icon-title">
-                                    <i class="fa-solid fa-camera text-orange"></i>
-                                    <h3>Label Scanner Interface</h3>
+                <!-- Theme Toggle -->
+                <button class="theme-toggle-btn" id="theme-toggle" aria-label="Toggle dark mode">
+                    <i class="fa-solid fa-moon" aria-hidden="true"></i>
+                </button>
+
+                <!-- User Profile -->
+                <div class="user-profile" role="button" tabindex="0" aria-label="Quality Director — FSSAI Certified Auditor">
+                    <div class="profile-avatar" aria-hidden="true">QA</div>
+                    <div class="profile-info">
+                        <p class="user-name">Quality Director</p>
+                        <p class="user-role">FSSAI Certified Auditor</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Tab Panels -->
+        <div class="tab-container">
+
+            <!-- TAB 0: OVERVIEW -->
+            <div id="tab-dashboard" class="tab-content active" role="tabpanel" aria-labelledby="nav-dashboard">
+                <div class="hero-section">
+                    <div class="hero-grid">
+                        <div class="hero-text-card">
+                            <h2>AI-Powered Food Safety Management</h2>
+                            <p>Ensure FSSAI compliance, validate documentation, audit labeling, predict recall risks, and manage operations in multiple languages with our integrated AI core.</p>
+                            <div class="hero-badges">
+                                <span class="hero-badge"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> FSSAI Compliant</span>
+                                <span class="hero-badge"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Real-time Prediction</span>
+                                <span class="hero-badge"><i class="fa-solid fa-microphone" aria-hidden="true"></i> Multi-lingual Voice AI</span>
+                            </div>
+                        </div>
+                        <div class="hero-stats-card">
+                            <div class="stat-circle-container">
+                                <div class="radial-progress-lg" style="--value:94;" role="img" aria-label="Enterprise Score: 94 out of 100">
+                                    <div class="inner-circle">
+                                        <span class="inner-title">Enterprise Score</span>
+                                        <span class="inner-value">94<small>/100</small></span>
+                                    </div>
                                 </div>
                             </div>
+                            <div class="stats-sub-row">
+                                <div class="sub-stat-item">
+                                    <span class="sub-stat-num text-success">98%</span>
+                                    <span class="sub-stat-label">Label Checks Passed</span>
+                                </div>
+                                <div class="divider" aria-hidden="true"></div>
+                                <div class="sub-stat-item">
+                                    <span class="sub-stat-num text-warning">89%</span>
+                                    <span class="sub-stat-label">Audit Readiness</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                            <div class="product-selector-group">
-                                <label for="product-sample">Select Sample Label to Scan</label>
+                <div class="section-header">
+                    <h2>Safety Core Modules</h2>
+                    <p>Access specialized AI sub-systems for regulatory auditing, risk control, and voice guidance</p>
+                </div>
+
+                <div class="module-cards-grid">
+                    <div class="module-card" data-target="regulatory" role="button" tabindex="0" aria-label="Launch Regulatory Assistant">
+                        <div class="card-glow" aria-hidden="true"></div>
+                        <div class="card-icon gradient-purple" aria-hidden="true"><i class="fa-solid fa-gavel"></i></div>
+                        <h3>Regulatory Assistant</h3>
+                        <p>Automated FSSAI compliance advice, real-time query resolution, and audit checklist generation.</p>
+                        <span class="card-link" aria-hidden="true">Launch Assistant <i class="fa-solid fa-arrow-right"></i></span>
+                    </div>
+                    <div class="module-card" data-target="doc-intel" role="button" tabindex="0" aria-label="Review Documents with Document Intelligence">
+                        <div class="card-glow" aria-hidden="true"></div>
+                        <div class="card-icon gradient-green" aria-hidden="true"><i class="fa-solid fa-file-shield"></i></div>
+                        <h3>Document Intelligence</h3>
+                        <p>Deep review of Standard Operating Procedures (SOPs) and HACCP plans to identify compliance gaps.</p>
+                        <span class="card-link" aria-hidden="true">Review Documents <i class="fa-solid fa-arrow-right"></i></span>
+                    </div>
+                    <div class="module-card" data-target="label-val" role="button" tabindex="0" aria-label="Scan Labels with Food Label Validator">
+                        <div class="card-glow" aria-hidden="true"></div>
+                        <div class="card-icon gradient-orange" aria-hidden="true"><i class="fa-solid fa-barcode"></i></div>
+                        <h3>Food Label Validator</h3>
+                        <p>Validate nutritional data and ingredient lists against regulatory warnings and allergen rules.</p>
+                        <span class="card-link" aria-hidden="true">Scan Labels <i class="fa-solid fa-arrow-right"></i></span>
+                    </div>
+                    <div class="module-card" data-target="recall-dash" role="button" tabindex="0" aria-label="Open Recall Prediction Dashboard">
+                        <div class="card-glow" aria-hidden="true"></div>
+                        <div class="card-icon gradient-red" aria-hidden="true"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <h3>Recall Prediction Dashboard</h3>
+                        <p>Predictive supplier risk scores, real-time contamination feeds, and corrective action workflows.</p>
+                        <span class="card-link" aria-hidden="true">Open Dashboard <i class="fa-solid fa-arrow-right"></i></span>
+                    </div>
+                    <div class="module-card" data-target="voice-agent" role="button" tabindex="0" aria-label="Start Multilingual Voice Agent">
+                        <div class="card-glow" aria-hidden="true"></div>
+                        <div class="card-icon gradient-blue" aria-hidden="true"><i class="fa-solid fa-microphone-lines"></i></div>
+                        <h3>Multilingual Voice Agent</h3>
+                        <p>Auditor support through speech commands in English, Hindi, and Tamil for hands-free compliance checks.</p>
+                        <span class="card-link" aria-hidden="true">Start Voice Agent <i class="fa-solid fa-arrow-right"></i></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 1: REGULATORY ASSISTANT -->
+            <div id="tab-regulatory" class="tab-content" role="tabpanel" aria-labelledby="nav-regulatory">
+                <div class="grid-2col">
+                    <!-- Chatbot -->
+                    <div class="glass-panel chatbot-container">
+                        <div class="panel-header">
+                            <div class="header-icon-title">
+                                <i class="fa-solid fa-robot text-purple" aria-hidden="true"></i>
+                                <h3>FSSAI Regulatory Chat Assistant</h3>
+                            </div>
+                            <span class="badge badge-purple-glow">FSSAI 2026 Ready</span>
+                        </div>
+                        <div class="chat-messages" id="chat-messages" role="log" aria-live="polite" aria-label="Chat conversation">
+                            <div class="message bot">
+                                <div class="msg-avatar" aria-hidden="true"><i class="fa-solid fa-robot"></i></div>
+                                <div class="msg-bubble">
+                                    <p>Hello! I am your FSSAI Regulatory Assistant. Ask me anything about licensing, shelf-life regulations, packaging rules, or compliance standards.</p>
+                                    <div class="msg-time" aria-hidden="true">Just now</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chat-chips" role="group" aria-label="Quick queries">
+                            <button class="chip-btn" data-query="What is the shelf life requirement for packaged dairy?">Dairy Shelf-life</button>
+                            <button class="chip-btn" data-query="What is the FSSAI license requirement for a food distributor?">Distributor License</button>
+                            <button class="chip-btn" data-query="Are organic food packages required to carry the Jaivik Bharat logo?">Jaivik Bharat Logo</button>
+                            <button class="chip-btn" data-query="What are the mandatory allergen warnings on food packaging?">Allergen Warnings</button>
+                        </div>
+                        <form class="chat-input-area" id="chat-form" role="search" aria-label="Ask a compliance question">
+                            <label for="chat-input" class="hidden">Type your compliance query</label>
+                            <input type="text" id="chat-input" placeholder="Ask a compliance query (e.g. 'What is Jaivik Bharat?')..." autocomplete="off" aria-label="Compliance query input">
+                            <button type="submit" class="send-btn btn-purple" aria-label="Send message">
+                                <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Checklist Generator -->
+                    <div class="glass-panel checklist-container">
+                        <div class="panel-header">
+                            <div class="header-icon-title">
+                                <i class="fa-solid fa-clipboard-list text-purple" aria-hidden="true"></i>
+                                <h3>Audit Readiness Checklist</h3>
+                            </div>
+                            <span class="badge badge-purple-glow">Compliance Verification</span>
+                        </div>
+                        <div class="checklist-config">
+                            <div class="input-group">
+                                <label for="business-type">Select Business Category</label>
                                 <div class="custom-select-wrapper">
-                                    <select id="product-sample">
-                                        <option value="energy-drink">HyperVolt Premium Energy Drink (500ml)</option>
-                                        <option value="potato-chips">Spicy Masala Potato Chips (120g)</option>
-                                        <option value="baby-cereal">GrowMax Wheat & Honey Baby Cereal (300g)</option>
+                                    <select id="business-type" aria-label="Business category">
+                                        <option value="restaurant">Restaurant &amp; Catering (FSSAI State/Central)</option>
+                                        <option value="manufacturing">Food Manufacturer &amp; Processing Unit</option>
+                                        <option value="warehouse">Storage, Warehouse &amp; Distribution Center</option>
                                     </select>
                                 </div>
                             </div>
+                            <button class="btn btn-purple w-full" id="btn-generate-checklist" aria-label="Generate audit checklist">
+                                <i class="fa-solid fa-rotate" aria-hidden="true"></i> Generate Audit Checklist
+                            </button>
+                        </div>
+                        <div class="checklist-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Checklist completion">
+                            <div class="progress-info">
+                                <span>Ticked Items: <strong id="checklist-count">0/10</strong></span>
+                                <span>Completion: <strong id="checklist-percent">0%</strong></span>
+                            </div>
+                            <div class="progress-track"><div class="progress-fill" id="checklist-progress-fill" style="width:0%"></div></div>
+                        </div>
+                        <div class="checklist-items-scroll" id="checklist-items" aria-live="polite">
+                            <div class="empty-state">
+                                <i class="fa-regular fa-clipboard" aria-hidden="true"></i>
+                                <p>Select business category and click Generate Checklist to start your compliance self-audit.</p>
+                            </div>
+                        </div>
+                        <div class="checklist-footer-actions hidden" id="checklist-actions">
+                            <button class="btn btn-secondary w-full" id="btn-export-audit">
+                                <i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Export Compliance Audit Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                            <div class="scanner-container">
-                                <div class="scanner-window" id="scanner-window">
-                                    <!-- Scan Line Anim -->
-                                    <div class="scan-laser-line" id="scan-laser"></div>
-                                    <!-- Mock Label Graphic -->
-                                    <div class="label-graphic-display" id="label-image-display">
-                                        <!-- Graphic generated dynamically -->
-                                    </div>
-                                    <!-- Scanning Overlay -->
-                                    <div class="scanning-overlay hidden" id="scanning-overlay">
-                                        <div class="pulse-ring"></div>
-                                        <p>Extracting OCR labels...</p>
-                                    </div>
-                                </div>
-                                <button class="btn btn-orange w-full mt-4" id="btn-start-scan">
-                                    <i class="fa-solid fa-qrcode"></i> Scan Label & Validate Ingredients
+            <!-- TAB 2: DOCUMENT INTELLIGENCE -->
+            <div id="tab-doc-intel" class="tab-content" role="tabpanel" aria-labelledby="nav-doc-intel">
+                <div class="grid-2col-40-60">
+                    <!-- Left: Upload -->
+                    <div class="glass-panel">
+                        <div class="panel-header">
+                            <div class="header-icon-title">
+                                <i class="fa-solid fa-file-import text-teal" aria-hidden="true"></i>
+                                <h3>Document Input Pipeline</h3>
+                            </div>
+                        </div>
+                        <div class="doc-selector-group">
+                            <span class="section-label">Select Standard Template</span>
+                            <div class="template-grid" role="group" aria-label="Document templates">
+                                <button class="template-btn active" data-doc="pest-control" aria-pressed="true">
+                                    <i class="fa-solid fa-bug" aria-hidden="true"></i><span>Pest Control SOP</span>
+                                </button>
+                                <button class="template-btn" data-doc="cold-chain" aria-pressed="false">
+                                    <i class="fa-solid fa-snowflake" aria-hidden="true"></i><span>HACCP: Cold Chain</span>
+                                </button>
+                                <button class="template-btn" data-doc="hygiene" aria-pressed="false">
+                                    <i class="fa-solid fa-soap" aria-hidden="true"></i><span>Hygiene &amp; Sanitization</span>
                                 </button>
                             </div>
                         </div>
-
-                        <!-- Right Panel: Label Compliance Report -->
-                        <div class="glass-panel">
-                            <div class="panel-header">
-                                <div class="header-icon-title">
-                                    <i class="fa-solid fa-square-check text-orange"></i>
-                                    <h3>Label Compliance Audit Report</h3>
-                                </div>
-                                <span class="badge badge-orange-glow" id="label-overall-badge">Checking...</span>
-                            </div>
-
-                            <div class="label-audit-body" id="label-audit-body">
-                                <!-- Nutritional Assessment -->
-                                <div class="audit-section">
-                                    <h4 class="section-title"><i class="fa-solid fa-heart-pulse"></i> Nutritional Safety Index</h4>
-                                    <div class="nutri-pills" id="nutri-pills-container">
-                                        <!-- badges -->
-                                    </div>
-                                </div>
-
-                                <!-- Ingredient Warnings -->
-                                <div class="audit-section">
-                                    <h4 class="section-title"><i class="fa-solid fa-flask-dietary"></i> Ingredient Warnings & Allergen Safety</h4>
-                                    <div class="warning-checklist" id="ingredient-warnings-container">
-                                        <!-- list -->
-                                    </div>
-                                </div>
-
-                                <!-- Regulatory Warning requirements -->
-                                <div class="audit-section">
-                                    <h4 class="section-title"><i class="fa-solid fa-circle-exclamation"></i> Mandatory Warning Declarations</h4>
-                                    <div class="alert-box alert-warning-box" id="mandatory-warnings-box">
-                                        <!-- statements -->
-                                    </div>
-                                </div>
-
-                                <!-- Final Signoff -->
-                                <div class="audit-section last">
-                                    <div class="compliance-verdict-box" id="compliance-verdict-box">
-                                        <!-- verdict -->
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="upload-drag-zone" id="upload-zone" role="button" tabindex="0" aria-label="Upload document — drag and drop or click to browse">
+                            <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
+                            <h4>Drag &amp; drop a PDF or Word document</h4>
+                            <p>or click to browse local files (simulated upload)</p>
+                            <input type="file" id="doc-file-input" class="hidden" accept=".pdf,.doc,.docx,.txt" aria-label="Upload document file" tabindex="-1">
                         </div>
-                    </div>
-                </div>
-
-                <!-- TAB 4: RECALL PREDICTION DASHBOARD -->
-                <div id="tab-recall-dash" class="tab-content">
-                    <!-- Metrics Row -->
-                    <div class="metrics-grid">
-                        <div class="metric-card">
-                            <div class="metric-info">
-                                <span class="metric-title">Recall Risk Index</span>
-                                <span class="metric-value text-danger" id="metric-risk-index">High (78%)</span>
+                        <div class="doc-viewer-card">
+                            <div class="viewer-header">
+                                <span class="file-name" id="doc-title">Pest_Control_SOP_v2.txt</span>
+                                <span class="file-size">4.2 KB</span>
                             </div>
-                            <div class="metric-icon bg-danger-glow"><i class="fa-solid fa-biohazard"></i></div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-info">
-                                <span class="metric-title">Critical Contamination alerts</span>
-                                <span class="metric-value text-warning" id="metric-alert-count">2 Active</span>
-                            </div>
-                            <div class="metric-icon bg-warning-glow"><i class="fa-solid fa-bell-exclamation"></i></div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-info">
-                                <span class="metric-title">Batches Quarantined</span>
-                                <span class="metric-value text-success" id="metric-quarantine-count">14 Batches</span>
-                            </div>
-                            <div class="metric-icon bg-success-glow"><i class="fa-solid fa-box-archive"></i></div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-info">
-                                <span class="metric-title">Supplier Health Rate</span>
-                                <span class="metric-value text-blue" id="metric-supplier-rate">91.4%</span>
-                            </div>
-                            <div class="metric-icon bg-blue-glow"><i class="fa-solid fa-truck-field"></i></div>
+                            <div class="viewer-body" id="doc-content-viewer" aria-live="polite"></div>
                         </div>
                     </div>
 
-                    <!-- Risk Charts & Feed -->
-                    <div class="grid-2col-55-45">
-                        <!-- Left Panel: Chart & Heatmap -->
-                        <div class="glass-panel">
-                            <div class="panel-header">
-                                <div class="header-icon-title">
-                                    <i class="fa-solid fa-chart-area text-red"></i>
-                                    <h3>Temporal Recall Risk Projections</h3>
-                                </div>
+                    <!-- Right: Analysis -->
+                    <div class="glass-panel">
+                        <div class="panel-header">
+                            <div class="header-icon-title">
+                                <i class="fa-solid fa-magnifying-glass-chart text-teal" aria-hidden="true"></i>
+                                <h3>AI Safety Compliance Analysis</h3>
                             </div>
-                            <div class="chart-container">
-                                <canvas id="riskChart"></canvas>
-                            </div>
-                            
-                            <div class="supplier-risk-table-container">
-                                <h4 class="mt-4 mb-2"><i class="fa-solid fa-users-gear text-red"></i> High-Risk Supplier Batches</h4>
-                                <table class="custom-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Supplier ID</th>
-                                            <th>Product Batch</th>
-                                            <th>Pathogen Risk</th>
-                                            <th>AI Risk Prob.</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="supplier-table-body">
-                                        <!-- dynamically generated rows -->
-                                    </tbody>
-                                </table>
+                            <div class="compliance-badge" id="doc-compliance-badge" aria-live="polite">
+                                <span class="compliance-score">82%</span> Score
                             </div>
                         </div>
-
-                        <!-- Right Panel: Live Feed & Actions -->
-                        <div class="glass-panel">
-                            <div class="panel-header">
-                                <div class="header-icon-title">
-                                    <i class="fa-solid fa-rss text-red"></i>
-                                    <h3>Real-Time Safety & Contamination Feed</h3>
-                                </div>
-                                <span class="badge badge-danger-glow pulsing">Live Stream</span>
-                            </div>
-
-                            <div class="live-alerts-feed" id="live-alerts-feed">
-                                <!-- list of feed items -->
-                            </div>
-
-                            <div class="corrective-actions-card">
-                                <h4><i class="fa-solid fa-shield-halved text-red"></i> Recommended Corrective Action (Active)</h4>
-                                <div class="action-details" id="action-details-panel">
-                                    <!-- detail -->
-                                </div>
-                            </div>
+                        <div class="analyzer-loading hidden" id="doc-analyzer-loading" aria-live="polite" aria-label="Analyzing document">
+                            <div class="spinner" aria-hidden="true"></div>
+                            <p>Running NLP compliance scan &amp; FSSAI cross-referencing...</p>
                         </div>
-                    </div>
-                </div>
-
-                <!-- TAB 5: MULTILINGUAL VOICE AGENT -->
-                <div id="tab-voice-agent" class="tab-content">
-                    <div class="voice-agent-layout">
-                        <!-- Main Voice Console -->
-                        <div class="glass-panel voice-console-card">
-                            <div class="voice-header">
-                                <div class="agent-profile">
-                                    <div class="voice-avatar-glow">
-                                        <div class="voice-avatar-inner">
-                                            <i class="fa-solid fa-microphone-lines"></i>
-                                        </div>
-                                    </div>
-                                    <div class="agent-text">
-                                        <h3>SafeFood Voice Agent</h3>
-                                        <p>Talk to me for hands-free factory floor audits</p>
-                                    </div>
+                        <div class="analyzer-results" id="doc-analyzer-results" aria-live="polite">
+                            <div class="score-card-row">
+                                <div class="score-sub-card">
+                                    <span class="score-card-title">HACCP Alignment</span>
+                                    <span class="score-card-val text-success" id="haccp-align">9/10</span>
                                 </div>
-                                <div class="voice-language-selector">
-                                    <label for="voice-lang">Auditing Language</label>
-                                    <div class="custom-select-wrapper">
-                                        <select id="voice-lang">
-                                            <option value="en-IN">English (Indian Accent)</option>
-                                            <option value="hi-IN">हिन्दी (Hindi)</option>
-                                            <option value="ta-IN">தமிழ் (Tamil)</option>
-                                        </select>
-                                    </div>
+                                <div class="score-sub-card">
+                                    <span class="score-card-title">FSSAI Schedule 4</span>
+                                    <span class="score-card-val text-warning" id="fssai-align">Critical Gap</span>
+                                </div>
+                                <div class="score-sub-card">
+                                    <span class="score-card-title">Pest Risk Index</span>
+                                    <span class="score-card-val text-danger" id="risk-align">High Risk</span>
                                 </div>
                             </div>
-
-                            <!-- Audio Soundwave visualization -->
-                            <div class="soundwave-container" id="soundwave-container">
-                                <div class="wave-bar"></div>
-                                <div class="wave-bar"></div>
-                                <div class="wave-bar"></div>
-                                <div class="wave-bar"></div>
-                                <div class="wave-bar"></div>
-                                <div class="wave-bar"></div>
-                                <div class="wave-bar"></div>
-                                <div class="wave-bar"></div>
-                                <div class="wave-bar"></div>
-                                <div class="wave-bar"></div>
-                                <div class="wave-bar"></div>
-                                <div class="wave-bar"></div>
-                                <div class="wave-bar"></div>
-                                <div class="wave-bar"></div>
-                                <div class="wave-bar"></div>
+                            <div class="gap-analysis-section">
+                                <h4><i class="fa-solid fa-triangle-exclamation text-danger" aria-hidden="true"></i> Compliance Gaps &amp; Missing Clauses</h4>
+                                <ul class="gap-list" id="gap-list-items" aria-label="Compliance gaps"></ul>
                             </div>
-
-                            <div class="voice-action-center">
-                                <button class="mic-trigger-btn" id="btn-mic-trigger">
-                                    <i class="fa-solid fa-microphone"></i>
-                                </button>
-                                <p class="mic-status-label" id="mic-status-label">Click the microphone and say a command</p>
-                            </div>
-
-                            <div class="speech-logs-container">
-                                <h4>Conversation Stream</h4>
-                                <div class="speech-conversation" id="voice-conversation-stream">
-                                    <div class="speech-bubble assistant">
-                                        <span class="speaker-tag">AI Agent</span>
-                                        <p class="speech-text" id="voice-intro-text">Hello! I am ready to assist you. Select your language, click the microphone, and ask me a safety regulation question or audit command. For example, say: "Verify shelf life for milk" or "What is storage rule?"</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Guide panel: Quick Commands -->
-                        <div class="glass-panel voice-instructions-card">
-                            <div class="panel-header">
-                                <div class="header-icon-title">
-                                    <i class="fa-solid fa-circle-info text-blue"></i>
-                                    <h3>Quick-Trigger Assistant Commands</h3>
-                                </div>
-                            </div>
-                            <div class="instructions-body">
-                                <p>Select your language above to see customized quick triggers, or click any chip below to simulate that spoken command instantly:</p>
-                                
-                                <div class="quick-command-section">
-                                    <h5>English Commands</h5>
-                                    <div class="voice-chips-container">
-                                        <button class="voice-chip-btn" data-lang="en-IN" data-utterance="check restaurant hygiene rule">"Check restaurant hygiene rule"</button>
-                                        <button class="voice-chip-btn" data-lang="en-IN" data-utterance="what are organic food logo regulations">"What are organic food logo regulations?"</button>
-                                        <button class="voice-chip-btn" data-lang="en-IN" data-utterance="recommend corrective action for bacteria">"Recommend corrective action for bacteria"</button>
-                                    </div>
-                                </div>
-
-                                <div class="quick-command-section">
-                                    <h5>हिंदी कमांड (Hindi Queries)</h5>
-                                    <div class="voice-chips-container">
-                                        <button class="voice-chip-btn" data-lang="hi-IN" data-utterance="डेयरी उत्पाद शेल्फ लाइफ नियम क्या है">"डेयरी उत्पाद शेल्फ लाइफ नियम क्या है?"</button>
-                                        <button class="voice-chip-btn" data-lang="hi-IN" data-utterance="हलाल और शाकाहारी मार्क नियम क्या है">"शाकाहारी भोजन का निशान क्या है?"</button>
-                                    </div>
-                                </div>
-
-                                <div class="quick-command-section">
-                                    <h5>தமிழ் கட்டளைகள் (Tamil Queries)</h5>
-                                    <div class="voice-chips-container">
-                                        <button class="voice-chip-btn" data-lang="ta-IN" data-utterance="உணவு பாதுகாப்பு உரிமம் பெறுவது எப்படி">"உணவு பாதுகாப்பு உரிமம் பெறுவது எப்படி?"</button>
-                                        <button class="voice-chip-btn" data-lang="ta-IN" data-utterance="உணவு லேபிள் விதிகள் என்ன">"உணவு லேபிள் விதிகள் என்ன?"</button>
-                                    </div>
-                                </div>
-
-                                <div class="browser-support-alert warning-alert" id="speech-support-alert" style="display: none;">
-                                    <i class="fa-solid fa-triangle-exclamation"></i>
-                                    <p>Speech Recognition is not supported by your current browser. You can still use the quick-trigger command buttons to test the AI responses and Voice Synthesis output.</p>
-                                </div>
+                            <div class="corrections-section">
+                                <h4><i class="fa-solid fa-pen-to-square text-success" aria-hidden="true"></i> Auto-Generated Corrections</h4>
+                                <div class="corrections-list" id="corrections-items" aria-live="polite"></div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </main>
-    </div>
 
-    <!-- Modals (e.g. Audit Export Details) -->
-    <div class="modal-overlay hidden" id="audit-modal">
-        <div class="modal-card">
-            <div class="modal-header">
-                <h3><i class="fa-solid fa-file-pdf text-purple"></i> Audit Readiness Report Generated</h3>
-                <button class="modal-close" id="btn-close-modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p>An official FSSAI-aligned compliance audit report has been compiled and is ready for download.</p>
-                <div class="audit-summary-box">
-                    <p><strong>Business Type:</strong> <span id="modal-business-type">Restaurant</span></p>
-                    <p><strong>Compliance Index:</strong> <span id="modal-compliance-percent">80%</span></p>
-                    <p><strong>Ticked Clauses:</strong> <span id="modal-compliance-ticked">8/10</span></p>
-                    <p><strong>Status:</strong> <span class="badge badge-success-glow" id="modal-status-badge">Audit Ready</span></p>
+            <!-- TAB 3: FOOD LABEL VALIDATOR -->
+            <div id="tab-label-val" class="tab-content" role="tabpanel" aria-labelledby="nav-label-val">
+                <div class="grid-2col-45-55">
+                    <!-- Left: Scanner -->
+                    <div class="glass-panel">
+                        <div class="panel-header">
+                            <div class="header-icon-title">
+                                <i class="fa-solid fa-camera text-orange" aria-hidden="true"></i>
+                                <h3>Label Scanner Interface</h3>
+                            </div>
+                        </div>
+                        <div class="product-selector-group">
+                            <div class="input-group">
+                                <label for="product-sample">Select Sample Label to Scan</label>
+                                <div class="custom-select-wrapper">
+                                    <select id="product-sample" aria-label="Sample label">
+                                        <option value="energy-drink">HyperVolt Premium Energy Drink (500ml)</option>
+                                        <option value="potato-chips">Spicy Masala Potato Chips (120g)</option>
+                                        <option value="baby-cereal">GrowMax Wheat &amp; Honey Baby Cereal (300g)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="scanner-container">
+                            <div class="scanner-window" id="scanner-window" role="button" tabindex="0" aria-label="Click to upload your own label image">
+                                <div class="scan-laser-line" id="scan-laser" aria-hidden="true"></div>
+                                <div class="label-graphic-display" id="label-image-display" aria-live="polite"></div>
+                                <div class="scanning-overlay hidden" id="scanning-overlay" aria-live="polite" aria-label="Scanning label">
+                                    <div class="pulse-ring" aria-hidden="true"></div>
+                                    <p>Extracting OCR labels...</p>
+                                </div>
+                            </div>
+                            <button class="btn btn-orange w-full mt-4" id="btn-start-scan">
+                                <i class="fa-solid fa-qrcode" aria-hidden="true"></i> Scan Label &amp; Validate Ingredients
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right: Report -->
+                    <div class="glass-panel">
+                        <div class="panel-header">
+                            <div class="header-icon-title">
+                                <i class="fa-solid fa-square-check text-orange" aria-hidden="true"></i>
+                                <h3>Label Compliance Audit Report</h3>
+                            </div>
+                            <span class="badge badge-orange-glow" id="label-overall-badge" aria-live="polite">Checking...</span>
+                        </div>
+                        <div class="label-audit-body" id="label-audit-body">
+                            <div class="audit-section">
+                                <h4 class="section-title"><i class="fa-solid fa-heart-pulse" aria-hidden="true"></i> Nutritional Safety Index</h4>
+                                <div class="nutri-pills" id="nutri-pills-container" aria-live="polite"></div>
+                            </div>
+                            <div class="audit-section">
+                                <h4 class="section-title"><i class="fa-solid fa-flask" aria-hidden="true"></i> Ingredient Warnings &amp; Allergen Safety</h4>
+                                <div class="warning-checklist" id="ingredient-warnings-container" aria-live="polite"></div>
+                            </div>
+                            <div class="audit-section">
+                                <h4 class="section-title"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> Mandatory Warning Declarations</h4>
+                                <div class="alert-box alert-warning-box" id="mandatory-warnings-box" aria-live="polite"></div>
+                            </div>
+                            <div class="audit-section last">
+                                <div class="compliance-verdict-box hidden" id="compliance-verdict-box" aria-live="polite"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <p class="note">This PDF contains a full inspection checklist, verified timestamp, and automated corrective measures for unticked checks.</p>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-purple" id="btn-download-pdf"><i class="fa-solid fa-download"></i> Download Audit Report PDF</button>
-                <button class="btn btn-text" id="btn-cancel-modal">Close</button>
+
+            <!-- TAB 4: RECALL PREDICTION -->
+            <div id="tab-recall-dash" class="tab-content" role="tabpanel" aria-labelledby="nav-recall-dash">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-info">
+                            <span class="metric-title">Recall Risk Index</span>
+                            <span class="metric-value text-danger" id="metric-risk-index">High (78%)</span>
+                        </div>
+                        <div class="metric-icon bg-danger-glow" aria-hidden="true"><i class="fa-solid fa-biohazard"></i></div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-info">
+                            <span class="metric-title">Critical Contamination Alerts</span>
+                            <span class="metric-value text-warning" id="metric-alert-count">2 Active</span>
+                        </div>
+                        <div class="metric-icon bg-warning-glow" aria-hidden="true"><i class="fa-solid fa-bell-exclamation"></i></div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-info">
+                            <span class="metric-title">Batches Quarantined</span>
+                            <span class="metric-value text-success" id="metric-quarantine-count">14 Batches</span>
+                        </div>
+                        <div class="metric-icon bg-success-glow" aria-hidden="true"><i class="fa-solid fa-box-archive"></i></div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-info">
+                            <span class="metric-title">Supplier Health Rate</span>
+                            <span class="metric-value text-blue" id="metric-supplier-rate">91.4%</span>
+                        </div>
+                        <div class="metric-icon bg-blue-glow" aria-hidden="true"><i class="fa-solid fa-truck-field"></i></div>
+                    </div>
+                </div>
+
+                <div class="grid-2col-55-45">
+                    <div class="glass-panel">
+                        <div class="panel-header">
+                            <div class="header-icon-title">
+                                <i class="fa-solid fa-chart-area text-danger" aria-hidden="true"></i>
+                                <h3>Temporal Recall Risk Projections</h3>
+                            </div>
+                        </div>
+                        <div class="chart-container"><canvas id="riskChart" aria-label="Recall risk chart" role="img"></canvas></div>
+                        <div class="supplier-risk-table-container">
+                            <h4 class="mt-4 mb-2"><i class="fa-solid fa-users-gear text-danger" aria-hidden="true"></i> High-Risk Supplier Batches</h4>
+                            <table class="custom-table" aria-label="High-risk supplier batches">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Supplier ID</th>
+                                        <th scope="col">Product Batch</th>
+                                        <th scope="col">Pathogen Risk</th>
+                                        <th scope="col">AI Risk Prob.</th>
+                                        <th scope="col">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="supplier-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="glass-panel">
+                        <div class="panel-header">
+                            <div class="header-icon-title">
+                                <i class="fa-solid fa-rss text-danger" aria-hidden="true"></i>
+                                <h3>Real-Time Safety &amp; Contamination Feed</h3>
+                            </div>
+                            <span class="badge badge-danger-glow pulsing">Live Stream</span>
+                        </div>
+                        <div class="live-alerts-feed" id="live-alerts-feed" role="log" aria-live="polite" aria-label="Live safety feed"></div>
+                        <div class="corrective-actions-card">
+                            <h4><i class="fa-solid fa-shield-halved text-danger" aria-hidden="true"></i> Recommended Corrective Action</h4>
+                            <div class="action-details" id="action-details-panel" aria-live="polite"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            <!-- TAB 5: VOICE AGENT -->
+            <div id="tab-voice-agent" class="tab-content" role="tabpanel" aria-labelledby="nav-voice-agent">
+                <div class="voice-agent-layout">
+                    <div class="glass-panel voice-console-card">
+                        <div class="voice-header">
+                            <div class="agent-profile">
+                                <div class="voice-avatar-glow" aria-hidden="true">
+                                    <div class="voice-avatar-inner"><i class="fa-solid fa-microphone-lines"></i></div>
+                                </div>
+                                <div class="agent-text">
+                                    <h3>SafeFood Voice Agent</h3>
+                                    <p>Hands-free factory floor audits</p>
+                                </div>
+                            </div>
+                            <div class="voice-language-selector">
+                                <label for="voice-lang">Auditing Language</label>
+                                <div class="custom-select-wrapper">
+                                    <select id="voice-lang" aria-label="Select auditing language">
+                                        <option value="en-IN">English (Indian Accent)</option>
+                                        <option value="hi-IN">हिन्दी (Hindi)</option>
+                                        <option value="ta-IN">தமிழ் (Tamil)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="soundwave-container" id="soundwave-container" aria-hidden="true">
+                            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+                            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+                            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+                            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+                            <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+                        </div>
+                        <div class="voice-action-center">
+                            <button class="mic-trigger-btn" id="btn-mic-trigger" aria-label="Start voice recognition — click to speak">
+                                <i class="fa-solid fa-microphone" aria-hidden="true"></i>
+                            </button>
+                            <p class="mic-status-label" id="mic-status-label" aria-live="polite">Click the microphone and say a command</p>
+                        </div>
+                        <div class="speech-logs-container">
+                            <h4>Conversation Stream</h4>
+                            <div class="speech-conversation" id="voice-conversation-stream" role="log" aria-live="polite" aria-label="Voice conversation">
+                                <div class="speech-bubble assistant">
+                                    <span class="speaker-tag">AI Agent</span>
+                                    <p class="speech-text" id="voice-intro-text">Hello! I am ready to assist you. Select your language, click the microphone, and ask a safety regulation question. For example: "Verify shelf life for milk" or "What is storage rule?"</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel voice-instructions-card">
+                        <div class="panel-header">
+                            <div class="header-icon-title">
+                                <i class="fa-solid fa-circle-info text-blue" aria-hidden="true"></i>
+                                <h3>Quick-Trigger Commands</h3>
+                            </div>
+                        </div>
+                        <div class="instructions-body">
+                            <p>Click any chip below to simulate that spoken command instantly:</p>
+                            <div class="quick-command-section">
+                                <h5>English Commands</h5>
+                                <div class="voice-chips-container">
+                                    <button class="voice-chip-btn" data-lang="en-IN" data-utterance="check restaurant hygiene rule">"Check restaurant hygiene rule"</button>
+                                    <button class="voice-chip-btn" data-lang="en-IN" data-utterance="what are organic food logo regulations">"What are organic food logo regulations?"</button>
+                                    <button class="voice-chip-btn" data-lang="en-IN" data-utterance="recommend corrective action for bacteria">"Recommend corrective action for bacteria"</button>
+                                </div>
+                            </div>
+                            <div class="quick-command-section">
+                                <h5>हिंदी कमांड (Hindi)</h5>
+                                <div class="voice-chips-container">
+                                    <button class="voice-chip-btn" data-lang="hi-IN" data-utterance="डेयरी उत्पाद शेल्फ लाइफ नियम क्या है">"डेयरी उत्पाद शेल्फ लाइफ नियम क्या है?"</button>
+                                    <button class="voice-chip-btn" data-lang="hi-IN" data-utterance="हलाल और शाकाहारी मार्क नियम क्या है">"शाकाहारी भोजन का निशान क्या है?"</button>
+                                </div>
+                            </div>
+                            <div class="quick-command-section">
+                                <h5>தமிழ் கட்டளைகள் (Tamil)</h5>
+                                <div class="voice-chips-container">
+                                    <button class="voice-chip-btn" data-lang="ta-IN" data-utterance="உணவு பாதுகாப்பு உரிமம் பெறுவது எப்படி">"உணவு பாதுகாப்பு உரிமம் பெறுவது எப்படி?"</button>
+                                    <button class="voice-chip-btn" data-lang="ta-IN" data-utterance="உணவு லேபிள் விதிகள் என்ன">"உணவு லேபிள் விதிகள் என்ன?"</button>
+                                </div>
+                            </div>
+                            <div class="browser-support-alert warning-alert" id="speech-support-alert" style="display:none;" role="alert">
+                                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                                <p>Speech Recognition is not supported by your browser. Use the quick-trigger buttons above to test AI responses.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /.tab-container -->
+    </main>
+</div><!-- /.app-container -->
+
+<!-- Modal: Audit Export -->
+<div class="modal-overlay hidden" id="audit-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-desc">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 id="modal-title"><i class="fa-solid fa-file-pdf text-purple" aria-hidden="true"></i> Audit Readiness Report Generated</h3>
+            <button class="modal-close" id="btn-close-modal" aria-label="Close modal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p id="modal-desc">An official FSSAI-aligned compliance audit report has been compiled and is ready for download.</p>
+            <div class="audit-summary-box">
+                <p><strong>Business Type:</strong> <span id="modal-business-type">Restaurant</span></p>
+                <p><strong>Compliance Index:</strong> <span id="modal-compliance-percent">80%</span></p>
+                <p><strong>Ticked Clauses:</strong> <span id="modal-compliance-ticked">8/10</span></p>
+                <p><strong>Status:</strong> <span class="badge badge-success-glow" id="modal-status-badge">Audit Ready</span></p>
+            </div>
+            <p class="note">This PDF contains a full inspection checklist, verified timestamp, and automated corrective measures for unticked checks.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-purple" id="btn-download-pdf"><i class="fa-solid fa-download" aria-hidden="true"></i> Download Audit Report PDF</button>
+            <button class="btn btn-text" id="btn-cancel-modal">Close</button>
         </div>
     </div>
+</div>
 
-    <!-- Script loading -->
-    <script src="app.js"></script>
+<!-- Toast Container -->
+<div id="toast-container" class="toast-container" role="region" aria-label="Notifications" aria-live="polite"></div>
+
+<script src="app.js"></script>
 </body>
 </html>
