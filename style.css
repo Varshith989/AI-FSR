@@ -2344,6 +2344,25 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   transform: scale(0.96);
 }
 
+.voice-hint-note {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+  line-height: 1.4;
+  padding: 0 var(--sp-1);
+}
+.voice-hint-note i {
+  color: var(--brand);
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+.voice-hint-note strong {
+  color: var(--text-primary);
+}
+
 /* Speech stream header */
 .speech-logs-header {
   display: flex;
