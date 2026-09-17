@@ -545,35 +545,104 @@ const templates = {
     }
 };
 
-function runDocumentAnalysis(docKey) {
+function renderDocAnalysisResult(analysis, docKey) {
+    docLoading.classList.add('hidden');
+    docResults.classList.remove('hidden');
+
+    const score = analysis.complianceScore || 75;
+    docCompBadge.innerHTML = `<span class="compliance-score ${score >= 85 ? 'text-success' : score >= 70 ? 'text-warning' : 'text-danger'}">${score}%</span> Score`;
+
+    haccpAlign.textContent = analysis.haccpAlignment || '—';
+    fssaiAlign.textContent = analysis.fssaiSchedule4Status || '—';
+    riskAlign.textContent  = analysis.safetyRiskLevel || '—';
+
+    haccpAlign.className = 'score-card-val text-success';
+    fssaiAlign.className = `score-card-val ${(analysis.fssaiSchedule4Status || '').includes('Critical') || (analysis.fssaiSchedule4Status || '').includes('Non-Compliant') ? 'text-danger' : (analysis.fssaiSchedule4Status || '').includes('Compliant') ? 'text-success' : 'text-warning'}`;
+    riskAlign.className  = `score-card-val ${(analysis.safetyRiskLevel || '').includes('High') || (analysis.safetyRiskLevel || '').includes('Critical') ? 'text-danger' : (analysis.safetyRiskLevel || '').includes('Medium') ? 'text-warning' : 'text-success'}`;
+
+    gapList.innerHTML = '';
+    const gaps = Array.isArray(analysis.complianceGaps) ? analysis.complianceGaps : [];
+    if (gaps.length === 0) {
+        gapList.innerHTML = '<li class="gap-item" style="color:var(--text-success)"><i class="fa-solid fa-circle-check" aria-hidden="true"></i><span>No significant compliance gaps detected.</span></li>';
+    } else {
+        gaps.forEach(gap => {
+            const li = document.createElement('li');
+            li.className = 'gap-item';
+            li.innerHTML = `<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><span>${gap}</span>`;
+            gapList.appendChild(li);
+        });
+    }
+
+    correctionsList.innerHTML = '';
+    const corrections = Array.isArray(analysis.recommendedCorrections) ? analysis.recommendedCorrections : [];
+    if (corrections.length === 0) {
+        correctionsList.innerHTML = '<div class="correction-card"><div class="correction-title" style="color:var(--text-success)"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> No corrections required</div></div>';
+    } else {
+        corrections.forEach(corr => {
+            const card = document.createElement('div');
+            card.className = 'correction-card';
+            card.innerHTML = `<div class="correction-title"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> ${corr.title}</div><div class="correction-text">${corr.text}</div>`;
+            correctionsList.appendChild(card);
+        });
+    }
+}
+
+function renderDocFallback(docKey) {
+    const doc = templates[docKey] || templates['pest-control'];
+    docLoading.classList.add('hidden');
+    docResults.classList.remove('hidden');
+    docCompBadge.innerHTML = `<span class="compliance-score ${doc.score >= 85 ? 'text-success' : doc.score >= 70 ? 'text-warning' : 'text-danger'}">${doc.score}%</span> Score`;
+    haccpAlign.textContent = doc.haccp; haccpAlign.className = 'score-card-val text-success';
+    fssaiAlign.textContent = doc.fssai; fssaiAlign.className = `score-card-val ${doc.fssai.includes('Critical') ? 'text-danger' : 'text-warning'}`;
+    riskAlign.textContent  = doc.risk;  riskAlign.className  = `score-card-val ${doc.risk.includes('High') ? 'text-danger' : doc.risk.includes('Medium') ? 'text-warning' : 'text-success'}`;
+    gapList.innerHTML = '';
+    doc.gaps.forEach(g => {
+        const li = document.createElement('li');
+        li.className = 'gap-item';
+        li.innerHTML = `<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><span>${g}</span>`;
+        gapList.appendChild(li);
+    });
+    correctionsList.innerHTML = '';
+    doc.corrections.forEach(c => {
+        const card = document.createElement('div');
+        card.className = 'correction-card';
+        card.innerHTML = `<div class="correction-title"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> ${c.title}</div><div class="correction-text">${c.text}</div>`;
+        correctionsList.appendChild(card);
+    });
+}
+
+async function runDocumentAnalysis(docKey) {
     const doc = templates[docKey];
+    if (!doc) return;
     docResults.classList.add('hidden');
     docLoading.classList.remove('hidden');
     docTitle.textContent = doc.title;
     document.querySelector('.file-size').textContent = doc.size;
     docContentView.innerHTML = doc.content;
-    setTimeout(() => {
-        docLoading.classList.add('hidden');
-        docResults.classList.remove('hidden');
-        docCompBadge.innerHTML = `<span class="compliance-score ${doc.score >= 85 ? 'text-success' : doc.score >= 70 ? 'text-warning' : 'text-danger'}">${doc.score}%</span> Score`;
-        haccpAlign.textContent = doc.haccp; haccpAlign.className = 'score-card-val text-success';
-        fssaiAlign.textContent = doc.fssai; fssaiAlign.className = `score-card-val ${doc.fssai.includes('Critical') ? 'text-danger' : 'text-warning'}`;
-        riskAlign.textContent  = doc.risk;  riskAlign.className  = `score-card-val ${doc.risk.includes('High') ? 'text-danger' : doc.risk.includes('Medium') ? 'text-warning' : 'text-success'}`;
-        gapList.innerHTML = '';
-        doc.gaps.forEach(g => {
-            const li = document.createElement('li');
-            li.className = 'gap-item';
-            li.innerHTML = `<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><span>${g}</span>`;
-            gapList.appendChild(li);
+
+    try {
+        const plainText = doc.content.replace(/<[^>]+>/g, '').replace(/&[a-z]+;/gi, ' ').trim();
+        const formData = new FormData();
+        formData.append('text', plainText);
+        formData.append('filename', doc.title);
+
+        const response = await fetch('/api/analyze-document', {
+            method: 'POST',
+            body: formData
         });
-        correctionsList.innerHTML = '';
-        doc.corrections.forEach(c => {
-            const card = document.createElement('div');
-            card.className = 'correction-card';
-            card.innerHTML = `<div class="correction-title"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> ${c.title}</div><div class="correction-text">${c.text}</div>`;
-            correctionsList.appendChild(card);
-        });
-    }, 1400);
+
+        if (!response.ok) throw new Error('Server error ' + response.status);
+        const data = await response.json();
+
+        if (data.source === 'ai' && data.analysis) {
+            renderDocAnalysisResult(data.analysis, docKey);
+        } else {
+            renderDocFallback(docKey);
+        }
+    } catch (err) {
+        console.warn('[Doc Analysis Fallback]', err.message);
+        renderDocFallback(docKey);
+    }
 }
 
 templateBtns.forEach(btn => {
@@ -593,24 +662,71 @@ uploadZone.addEventListener('click', () => docFileInput.click());
 uploadZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); docFileInput.click(); }});
 docFileInput.addEventListener('change', () => { if (docFileInput.files[0]) handleDocUpload(docFileInput.files[0]); });
 
-function handleDocUpload(file) {
+async function handleDocUpload(file) {
     docResults.classList.add('hidden');
     docLoading.classList.remove('hidden');
     docTitle.textContent = file.name;
     document.querySelector('.file-size').textContent = `${(file.size/1024).toFixed(1)} KB`;
-    docContentView.textContent = `Simulating upload analysis of: "${file.name}"\nRunning NLP entities scanner...`;
-    showToast({ title: 'Document Uploaded', message: `Analyzing ${file.name}...`, type: 'info' });
-    setTimeout(() => {
+    docContentView.textContent = `Uploading and analyzing: "${file.name}"\n\nSending to AI compliance engine...`;
+    showToast({ title: 'Document Uploaded', message: `Analyzing ${file.name} with AI...`, type: 'info' });
+
+    const acceptedTypes = ['text/plain', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!acceptedTypes.includes(file.type) && !['txt','pdf','doc','docx'].includes(ext)) {
         docLoading.classList.add('hidden');
         docResults.classList.remove('hidden');
-        docCompBadge.innerHTML = '<span class="compliance-score text-warning">78%</span> Score';
-        haccpAlign.textContent = '8/10'; haccpAlign.className = 'score-card-val text-success';
-        fssaiAlign.textContent = 'Minor Gaps'; fssaiAlign.className = 'score-card-val text-warning';
-        riskAlign.textContent  = 'Low Risk';   riskAlign.className  = 'score-card-val text-success';
-        gapList.innerHTML = '<li class="gap-item"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><span>Document contains general hygiene protocols but lacks specific CCP metrics.</span></li>';
-        correctionsList.innerHTML = '<div class="correction-card"><div class="correction-title"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Recommendation</div><div class="correction-text">"Append HACCP CCP sheets with limits, probe numbers, and safety tolerances."</div></div>';
-        showToast({ title: 'Analysis Complete', message: 'Document compliance scan finished.', type: 'success' });
-    }, 1500);
+        gapList.innerHTML = '<li class="gap-item"><i class="fa-solid fa-circle-xmark text-danger" aria-hidden="true"></i><span>Unsupported file type. Please upload TXT, PDF, or DOCX files only.</span></li>';
+        correctionsList.innerHTML = '';
+        docCompBadge.innerHTML = '<span class="compliance-score text-danger">Error</span>';
+        showToast({ title: 'Upload Failed', message: 'Unsupported file type. Use TXT, PDF, or DOCX.', type: 'danger' });
+        return;
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('document', file);
+
+        const response = await fetch('/api/analyze-document', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            docLoading.classList.add('hidden');
+            docResults.classList.remove('hidden');
+            gapList.innerHTML = `<li class="gap-item"><i class="fa-solid fa-circle-xmark text-danger" aria-hidden="true"></i><span>${data.error || 'Analysis failed.'}</span></li>`;
+            correctionsList.innerHTML = '';
+            docCompBadge.innerHTML = '<span class="compliance-score text-danger">Error</span>';
+            haccpAlign.textContent = '—'; fssaiAlign.textContent = '—'; riskAlign.textContent = '—';
+            showToast({ title: 'Analysis Error', message: data.error || 'Analysis failed.', type: 'danger' });
+            return;
+        }
+
+        if (data.source === 'ai' && data.analysis) {
+            renderDocAnalysisResult(data.analysis, null);
+            showToast({ title: 'AI Analysis Complete', message: `Compliance scan finished for ${file.name}.`, type: 'success' });
+        } else {
+            docLoading.classList.add('hidden');
+            docResults.classList.remove('hidden');
+            docCompBadge.innerHTML = '<span class="compliance-score text-warning">78%</span> Score';
+            haccpAlign.textContent = '8/10'; haccpAlign.className = 'score-card-val text-success';
+            fssaiAlign.textContent = 'Minor Gaps'; fssaiAlign.className = 'score-card-val text-warning';
+            riskAlign.textContent  = 'Low Risk';   riskAlign.className  = 'score-card-val text-success';
+            gapList.innerHTML = '<li class="gap-item"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><span>Document contains general hygiene protocols but lacks specific CCP metrics.</span></li>';
+            correctionsList.innerHTML = '<div class="correction-card"><div class="correction-title"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Recommendation</div><div class="correction-text">"Append HACCP CCP sheets with limits, probe numbers, and safety tolerances."</div></div>';
+            showToast({ title: 'Analysis Complete', message: 'Document compliance scan finished.', type: 'success' });
+        }
+    } catch (err) {
+        console.warn('[File Upload Error]', err.message);
+        docLoading.classList.add('hidden');
+        docResults.classList.remove('hidden');
+        gapList.innerHTML = '<li class="gap-item"><i class="fa-solid fa-circle-xmark text-danger" aria-hidden="true"></i><span>Network error. Could not reach AI analysis server.</span></li>';
+        correctionsList.innerHTML = '';
+        docCompBadge.innerHTML = '<span class="compliance-score text-danger">Error</span>';
+        showToast({ title: 'Network Error', message: 'Could not reach analysis server.', type: 'danger' });
+    }
 }
 
 /* -------------------------------------------------------
@@ -833,47 +949,176 @@ function renderFeed() {
     });
 }
 
-function quarantineAction(id) {
+// Supplier notification modal (in-app, no browser alert)
+function showSupplierNotificationModal(supplierId, batchId, notificationText, assessmentData) {
+    const existing = document.getElementById('supplier-notify-modal');
+    if (existing) existing.remove();
+
+    const classification = assessmentData ? assessmentData.recallClassification || 'Class I - Dangerous' : 'Class I - Dangerous';
+    const riskScore = assessmentData ? assessmentData.recallRiskScore || '--' : '--';
+    const necessity = assessmentData ? assessmentData.recallNecessity || 'Immediate Mandatory Recall' : 'Immediate Mandatory Recall';
+
+    const modal = document.createElement('div');
+    modal.id = 'supplier-notify-modal';
+    modal.className = 'modal-overlay';
+    modal.style.cssText = 'display:flex;';
+    modal.innerHTML = `
+        <div class="modal-card" style="max-width:560px;width:100%;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-envelope text-danger" aria-hidden="true"></i> Supplier Alert Notification — ${supplierId}</h3>
+                <button class="modal-close" id="btn-close-notify-modal" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="audit-summary-box" style="margin-bottom:1rem;">
+                    <p><strong>Supplier:</strong> <span>${supplierId}</span> | <strong>Batch:</strong> <span>${batchId}</span></p>
+                    <p><strong>Classification:</strong> <span style="color:var(--danger);font-weight:600;">${classification}</span></p>
+                    <p><strong>Risk Score:</strong> <span>${riskScore}/100</span> | <strong>Action:</strong> <span>${necessity}</span></p>
+                </div>
+                <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem;font-weight:600;">NOTIFICATION MESSAGE (AI-Generated):</p>
+                <div style="background:rgba(0,0,0,0.15);border:1px solid var(--border-glass, rgba(255,255,255,0.1));border-radius:8px;padding:1rem;font-size:0.85rem;line-height:1.6;color:var(--text-primary);white-space:pre-wrap;">${notificationText || 'This is an urgent safety notification. Please quarantine the affected batch immediately and await further instructions from our QA team.'}</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" id="btn-copy-notify"><i class="fa-solid fa-copy" aria-hidden="true"></i> Copy Message</button>
+                <button class="btn btn-text" id="btn-dismiss-notify">Dismiss</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    const closeNotify = () => modal.remove();
+    document.getElementById('btn-close-notify-modal').addEventListener('click', closeNotify);
+    document.getElementById('btn-dismiss-notify').addEventListener('click', closeNotify);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeNotify(); });
+    document.getElementById('btn-copy-notify').addEventListener('click', () => {
+        navigator.clipboard.writeText(notificationText || '').then(() => {
+            const btn = document.getElementById('btn-copy-notify');
+            btn.innerHTML = '<i class="fa-solid fa-check" aria-hidden="true"></i> Copied!';
+            showToast({ title: 'Copied to Clipboard', message: 'Supplier notification text ready to dispatch.', type: 'success' });
+            setTimeout(() => {
+                const el = document.getElementById('btn-copy-notify');
+                if (el) el.innerHTML = '<i class="fa-solid fa-copy" aria-hidden="true"></i> Copy Message';
+            }, 2000);
+        }).catch(() => {});
+    });
+}
+
+let lastRecallAssessment = null;
+
+async function quarantineAction(id) {
     const sup = supplierData.find(s => s.id === id);
     if (!sup) return;
-    sup.status = 'quarantined'; sup.risk = '12%';
+
+    actionDetailsPanel.innerHTML = `
+        <div style="text-align:center;padding:1rem;color:var(--text-secondary);">
+            <i class="fa-solid fa-circle-notch fa-spin text-brand" style="font-size:1.5rem;margin-bottom:0.5rem;display:block;" aria-hidden="true"></i>
+            <p>Running AI recall risk assessment for Batch ${sup.batch}...</p>
+        </div>
+    `;
+
+    try {
+        const response = await fetch('/api/recall-assessment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                supplierInfo: `Supplier ID: ${sup.id}`,
+                batchInfo: `Batch: ${sup.batch}`,
+                pathogenInfo: sup.pathogen,
+                temperatureInfo: 'Temperature deviation detected in logistics transport',
+                traceabilityInfo: 'Batch traceability records available',
+                incidentDescription: `${sup.pathogen} detected in supplier ${sup.id} batch ${sup.batch}. Risk probability: ${sup.risk}.`
+            })
+        });
+        const data = await response.json();
+        lastRecallAssessment = data.assessment || null;
+    } catch (err) {
+        console.warn('[Recall Assessment error]', err);
+        lastRecallAssessment = null;
+    }
+
+    sup.status = 'quarantined';
+    const riskScore = lastRecallAssessment ? lastRecallAssessment.recallRiskScore : null;
+    sup.risk = riskScore ? riskScore + '%' : '12%';
     updateSupplierTable();
+
     document.getElementById('metric-risk-index').textContent = 'Moderate (35%)';
     document.getElementById('metric-risk-index').className = 'metric-value text-warning';
     document.getElementById('metric-alert-count').textContent = '1 Active';
     document.getElementById('metric-quarantine-count').textContent = '15 Batches';
-    feedAlerts.unshift({ time:'Just now', type:'warning', text:`Batch ${sup.batch} from Supplier ${sup.id} quarantined. Containment procedures initiated.` });
+
+    const classification = lastRecallAssessment ? lastRecallAssessment.recallClassification || '' : '';
+    const classTag = classification ? ` [${classification}]` : '';
+
+    feedAlerts.unshift({ time:'Just now', type:'warning', text:`Batch ${sup.batch} from Supplier ${sup.id} quarantined.${classTag} AI risk score: ${sup.risk}. Containment procedures initiated.` });
     if (feedAlerts.length > 5) feedAlerts.pop();
     renderFeed();
     renderActionPanel();
-    showToast({ title: 'Batch Quarantined', message: `Supplier ${id} Batch ${sup.batch} isolated successfully.`, type: 'warning', duration: 4000 });
+    showToast({ title: 'Batch Quarantined', message: `Supplier ${id} Batch ${sup.batch} isolated.${classTag}`, type: 'warning', duration: 4000 });
 }
 
 function clearAction(id) {
     const sup = supplierData.find(s => s.id === id);
     if (!sup) return;
     sup.status = 'cleared'; sup.risk = '5%';
+    lastRecallAssessment = null;
     updateSupplierTable();
-    feedAlerts.unshift({ time:'Just now', type:'info', text:`Batch ${sup.batch} cleared from quarantine after sanitation tests.` });
+    feedAlerts.unshift({ time:'Just now', type:'info', text:`Batch ${sup.batch} cleared from quarantine after sanitation tests. Supplier ${sup.id} reinstated.` });
     if (feedAlerts.length > 5) feedAlerts.pop();
     renderFeed();
     renderActionPanel();
-    showToast({ title: 'Batch Cleared', message: `Supplier ${id} Batch ${sup.batch} cleared and released.`, type: 'success', duration: 4000 });
+    showToast({ title: 'Batch Cleared', message: `Supplier ${id} Batch ${sup.batch} cleared and reinstated.`, type: 'success', duration: 4000 });
 }
 
 function renderActionPanel() {
     const hi = supplierData.find(s => s.status === 'monitored');
     if (hi) {
+        const assessment = lastRecallAssessment;
+        const riskInfo = assessment
+            ? `AI Risk Score: <strong>${assessment.recallRiskScore}/100</strong> | <span style="color:var(--danger);font-weight:600;">${assessment.recallClassification || ''}</span>`
+            : `High probability ${hi.pathogen} contamination risk detected.`;
+        const instruction = assessment
+            ? assessment.quarantineInstructions || 'FSSAI Chapter 3 compliance requires physical quarantine of the batch and formal supplier diagnostic auditing.'
+            : 'FSSAI Chapter 3 compliance requires physical quarantine of the batch and formal supplier diagnostic auditing.';
+
         actionDetailsPanel.innerHTML = `
             <div class="action-meta">TARGET: SUPPLIER ${hi.id} | BATCH ${hi.batch} | PROBABILITY: ${hi.risk}</div>
-            <div class="action-instruction">High probability E. coli trace contamination risk. FSSAI Chapter 3 requires physical quarantine and formal supplier diagnostic auditing.</div>
+            <div class="action-instruction" style="margin-bottom:0.5rem;">${riskInfo}</div>
+            <div class="action-instruction">${instruction}</div>
             <div class="action-buttons">
                 <button class="btn btn-teal" id="btn-quarantine-now"><i class="fa-solid fa-ban" aria-hidden="true"></i> Quarantine Batch</button>
                 <button class="btn btn-secondary" id="btn-notify-supplier"><i class="fa-solid fa-envelope" aria-hidden="true"></i> Send Alert Email</button>
             </div>`;
         document.getElementById('btn-quarantine-now').addEventListener('click', () => quarantineAction(hi.id));
-        document.getElementById('btn-notify-supplier').addEventListener('click', () => {
-            showToast({ title: 'Alert Dispatched', message: `Warning notification sent to Supplier ${hi.id} for Batch ${hi.batch}.`, type: 'info', duration: 4000 });
+        document.getElementById('btn-notify-supplier').addEventListener('click', async () => {
+            const btn = document.getElementById('btn-notify-supplier');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i> Generating...';
+
+            let notifText = '';
+            let assessmentData = lastRecallAssessment;
+
+            if (!assessmentData) {
+                try {
+                    const resp = await fetch('/api/recall-assessment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            supplierInfo: `Supplier ID: ${hi.id}`,
+                            batchInfo: `Batch: ${hi.batch}`,
+                            pathogenInfo: hi.pathogen,
+                            incidentDescription: `${hi.pathogen} detected in supplier ${hi.id} batch ${hi.batch}.`
+                        })
+                    });
+                    const d = await resp.json();
+                    assessmentData = d.assessment || null;
+                    lastRecallAssessment = assessmentData;
+                } catch (_) {}
+            }
+
+            notifText = assessmentData ? assessmentData.supplierNotification : `This is an urgent safety notification regarding potential contamination risk in Batch ${hi.batch}. Following FSSAI protocols, we are initiating an immediate quarantine and recall investigation. Please halt distribution of all units from this production run and cooperate with our QA team within 24 hours.`;
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-envelope" aria-hidden="true"></i> Send Alert Email';
+            showSupplierNotificationModal(hi.id, hi.batch, notifText, assessmentData);
         });
     } else {
         actionDetailsPanel.innerHTML = `<div class="action-instruction" style="color:var(--text-secondary);text-align:center;padding:1rem 0;"><i class="fa-solid fa-circle-check text-success" style="font-size:1.5rem;display:block;margin-bottom:.5rem;" aria-hidden="true"></i>All critical batches quarantined or cleared. Risks are currently stabilized.</div>`;
