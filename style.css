@@ -2227,6 +2227,66 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   background: rgba(239, 68, 68, 0.08);
 }
 
+/* Mic Permission Helper Banner */
+.mic-permission-helper {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-xs);
+  color: var(--text-primary);
+  margin-top: var(--sp-2);
+  animation: fadeIn 0.3s ease;
+}
+.mic-permission-helper.hidden {
+  display: none;
+}
+.mic-permission-helper .helper-content {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  line-height: 1.4;
+}
+.mic-permission-helper .helper-content i {
+  color: var(--warning);
+  font-size: 1.1rem;
+  margin-top: 2px;
+}
+.mic-permission-helper .helper-text strong {
+  font-size: var(--text-xs);
+  color: var(--text-primary);
+  display: block;
+}
+.mic-permission-helper .helper-text p {
+  margin: 3px 0 0 0;
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+.mic-permission-helper .helper-text code {
+  background: rgba(0,0,0,0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.72rem;
+}
+.btn-dismiss-helper {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 4px;
+}
+.btn-dismiss-helper:hover {
+  color: var(--text-primary);
+}
+
 /* Inline voice/text input bar */
 .voice-input-bar {
   display: flex;

@@ -913,6 +913,8 @@ const btnClearVoice        = document.getElementById('btn-clear-voice');
 const voiceQuickInputForm  = document.getElementById('voice-quick-input-form');
 const voiceTextInput       = document.getElementById('voice-text-input');
 const tabVoiceAgent        = document.getElementById('tab-voice-agent');
+const micPermissionHelper  = document.getElementById('mic-permission-helper');
+const btnDismissHelper     = document.getElementById('btn-dismiss-helper');
 
 // Client-side fallback knowledge for instant zero-latency responses
 const clientVoiceAnswers = {
@@ -1238,13 +1240,20 @@ if (!isSpeechSupported) {
             if (event.error === 'no-speech') {
                 if (micStatusLabel) micStatusLabel.textContent = 'No voice detected. Tap the microphone and try speaking again.';
             } else if (event.error === 'not-allowed') {
-                if (micStatusLabel) micStatusLabel.textContent = 'Microphone permission blocked. Please allow mic in your browser settings.';
+                if (micPermissionHelper) micPermissionHelper.classList.remove('hidden');
+                if (micStatusLabel) {
+                    micStatusLabel.innerHTML = 'Microphone blocked. Tap <strong>tune icon 🎛️</strong> in address bar to Allow, or use keyboard mic below.';
+                }
                 showToast({
-                    title: 'Microphone Permission Needed',
-                    message: 'Please allow microphone access in your mobile browser settings to speak.',
+                    title: 'Microphone Blocked in Browser',
+                    message: 'Tap the tune icon 🎛️ next to the URL in your address bar ➔ Permissions ➔ Allow Microphone.',
                     type: 'warning',
-                    duration: 5000
+                    duration: 6000
                 });
+                // Focus keyboard input as immediate fallback so user can still dictate hands-free via phone keyboard
+                if (voiceTextInput) {
+                    voiceTextInput.focus();
+                }
             } else if (event.error !== 'aborted') {
                 if (micStatusLabel) micStatusLabel.textContent = 'Tap the microphone to speak, or tap any quick question below';
             }
@@ -1411,6 +1420,30 @@ if (defaultReplayBtn) {
         const intro = document.getElementById('voice-intro-text');
         if (intro) speakText(intro.textContent, voiceLangSelect.value);
     });
+}
+
+// Dismiss mic permission helper banner
+if (btnDismissHelper) {
+    btnDismissHelper.addEventListener('click', () => {
+        if (micPermissionHelper) micPermissionHelper.classList.add('hidden');
+    });
+}
+
+// Proactively monitor microphone permission if supported
+if (navigator.permissions && navigator.permissions.query) {
+    navigator.permissions.query({ name: 'microphone' }).then(status => {
+        if (status.state === 'denied' && micPermissionHelper) {
+            micPermissionHelper.classList.remove('hidden');
+        }
+        status.onchange = () => {
+            if (status.state === 'granted') {
+                if (micPermissionHelper) micPermissionHelper.classList.add('hidden');
+                if (micStatusLabel) micStatusLabel.textContent = 'Microphone ready! Tap the mic to speak.';
+            } else if (status.state === 'denied') {
+                if (micPermissionHelper) micPermissionHelper.classList.remove('hidden');
+            }
+        };
+    }).catch(() => {});
 }
 
 }); // end DOMContentLoaded
