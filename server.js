@@ -5,6 +5,13 @@ const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const multer = require('multer');
 
+// Optional document parsers – loaded lazily so the server still starts even if
+// packages are not yet installed (npm install runs in background).
+let pdfParse = null;
+let mammoth = null;
+try { pdfParse = require('pdf-parse'); } catch (_) { console.warn('[server] pdf-parse not installed – PDF extraction unavailable'); }
+try { mammoth = require('mammoth'); } catch (_) { console.warn('[server] mammoth not installed – DOCX extraction unavailable'); }
+
 const PORT = process.env.PORT || 3000;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -455,6 +462,292 @@ Validation rules to apply:
     });
 }
 
+
+// -------------------------------------------------------
+// Document text extractor
+// -------------------------------------------------------
+async function extractDocumentText(buffer, mimetype, originalname) {
+    const ext = (originalname || '').toLowerCase().split('.').pop();
+
+    // Plain text
+    if (mimetype === 'text/plain' || ext === 'txt') {
+        return buffer.toString('utf-8');
+    }
+
+    // PDF
+    if ((mimetype === 'application/pdf' || ext === 'pdf') && pdfParse) {
+        try {
+            const data = await pdfParse(buffer);
+            return data.text || '';
+        } catch (e) {
+            console.error('[PDF parse error]', e.message);
+            return null;
+        }
+    }
+
+    // DOCX / DOC
+    if ((mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+         mimetype === 'application/msword' || ext === 'docx' || ext === 'doc') && mammoth) {
+        try {
+            const result = await mammoth.extractRawText({ buffer });
+            return result.value || '';
+        } catch (e) {
+            console.error('[DOCX parse error]', e.message);
+            return null;
+        }
+    }
+
+    return null; // unsupported
+}
+
+// -------------------------------------------------------
+// Handler: POST /api/analyze-document
+// -------------------------------------------------------
+const DOCUMENT_ANALYSIS_PROMPT = `You are an expert FSSAI food safety auditor with deep knowledge of:
+- HACCP (Hazard Analysis Critical Control Points) principles
+- FSSAI Schedule 4 sanitary and hygiene requirements
+- Good Manufacturing Practices (GMP) for food businesses
+- Critical Control Points, temperature monitoring, chemical handling
+- Worker hygiene, cleaning/sanitation, pest control
+- Required records and documentation under Indian food law
+
+Analyze the following food safety document (SOP, HACCP plan, or inspection report) and return ONLY a valid JSON object (no markdown, no explanation):
+
+{
+  "complianceScore": <number 0-100>,
+  "haccpAlignment": "<X/10 score + one-word status like 'Excellent' or 'Critical'>",
+  "fssaiSchedule4Status": "<one of: Compliant | Satisfactory | Minor Gaps | Critical Gaps | Non-Compliant>",
+  "safetyRiskLevel": "<one of: Low Risk | Medium Risk | High Risk | Critical Risk>",
+  "complianceGaps": [
+    "<gap description 1>",
+    "<gap description 2>"
+  ],
+  "recommendedCorrections": [
+    { "title": "<Corrective Clause X.X - Topic>", "text": "<quoted corrective clause text>" }
+  ],
+  "summary": "<2-sentence overall summary>"
+}
+
+Rules:
+- Be specific and reference exact clauses or standards
+- complianceGaps should list real, verifiable issues found in the document
+- recommendedCorrections should provide actionable, FSSAI-compliant corrective language
+- If the document is excellent, complianceGaps can be empty and complianceScore near 95-100
+- If document text is very short or unclear, still provide best-effort analysis
+
+DOCUMENT TEXT TO ANALYZE:
+`;
+
+async function handleAnalyzeDocument(req, res) {
+    const multerSingle = upload.single('document');
+    multerSingle(req, res, async (err) => {
+        if (err) return sendJSON(res, 400, { error: 'File upload error: ' + err.message });
+
+        // No file → check for a text field sent via FormData or plain JSON
+        if (!req.file) {
+            // multer populates req.body for multipart text fields
+            const docText = (req.body && req.body.text) || '';
+            if (!docText.trim()) {
+                return sendJSON(res, 400, { error: 'No document file or text provided' });
+            }
+            const filename = (req.body && req.body.filename) || 'Template Document';
+            return analyzeTextWithGemini(res, docText, 'template', filename);
+        }
+
+        // We have a file
+        const file = req.file;
+        if (file.size === 0) {
+            return sendJSON(res, 400, { error: 'Uploaded file is empty' });
+        }
+
+        const docText = await extractDocumentText(file.buffer, file.mimetype, file.originalname);
+
+        if (docText === null) {
+            return sendJSON(res, 415, {
+                error: `Unsupported file type. Please upload a TXT, PDF, or DOCX file.${
+                    file.mimetype.includes('pdf') && !pdfParse ? ' (pdf-parse package not ready)' : ''
+                }`
+            });
+        }
+
+        if (!docText.trim()) {
+            return sendJSON(res, 422, { error: 'Could not extract any text from the uploaded file. The document may be empty, image-only, or corrupted.' });
+        }
+
+        return analyzeTextWithGemini(res, docText, 'upload', file.originalname);
+    });
+}
+
+async function analyzeTextWithGemini(res, docText, source, filename) {
+    if (genAI) {
+        const prompt = DOCUMENT_ANALYSIS_PROMPT + docText.substring(0, 12000); // cap at 12k chars
+        const reply = await callGemini([{ text: prompt }]);
+        if (reply) {
+            try {
+                let raw = reply.trim();
+                raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+                const analysis = JSON.parse(raw);
+                return sendJSON(res, 200, { source: 'ai', analysis, filename });
+            } catch (parseErr) {
+                console.error('[Document Analysis JSON parse error]', parseErr.message, reply.substring(0, 200));
+            }
+        }
+    }
+    // Fallback: return signal to use template data
+    return sendJSON(res, 200, { source: 'fallback', filename });
+}
+
+// -------------------------------------------------------
+// Handler: POST /api/recall-assessment
+// -------------------------------------------------------
+const RECALL_ASSESSMENT_PROMPT = `You are an expert food safety scientist and FSSAI recall coordinator.
+Analyze the following food recall risk scenario and return ONLY a valid JSON object (no markdown, no explanation):
+
+{
+  "recallRiskScore": <number 0-100>,
+  "contaminationSeverity": "<one of: Minimal | Low | Moderate | High | Critical>",
+  "recallClassification": "<one of: Class I - Dangerous | Class II - May Cause Adverse Effects | Class III - Unlikely to Cause Harm | No Recall Needed>",
+  "recallNecessity": "<one of: Immediate Mandatory Recall | Precautionary Voluntary Recall | Corrective Action Without Recall | Monitor Only>",
+  "supplierRiskRating": "<one of: Low | Moderate | High | Critical>",
+  "correctiveActions": [
+    "<action 1>",
+    "<action 2>",
+    "<action 3>"
+  ],
+  "quarantineInstructions": "<specific quarantine instructions for the batch>",
+  "supplierNotification": "<professional 3-4 sentence notification message to send to the supplier>",
+  "summary": "<2-sentence summary of the risk assessment>"
+}
+
+Rules:
+- recallRiskScore near 80-100 means immediate recall likely needed
+- recallRiskScore near 40-60 means precautionary or corrective action
+- recallRiskScore below 30 means monitor only
+- Consider pathogen type, temperature abuse, traceability gaps, and incident description
+- Salmonella and Listeria in RTE foods = Class I
+- E. coli O157:H7 in any food = Class I
+- supplierNotification must be professional and formal
+
+RECALL SCENARIO TO ANALYZE:
+`;
+
+async function handleRecallAssessment(req, res) {
+    let body;
+    try { body = await readBody(req); }
+    catch (e) { return sendJSON(res, 400, { error: 'Invalid request body' }); }
+
+    const {
+        supplierInfo = '',
+        batchInfo = '',
+        pathogenInfo = '',
+        temperatureInfo = '',
+        traceabilityInfo = '',
+        incidentDescription = ''
+    } = body;
+
+    const scenarioText = `
+Supplier Information: ${supplierInfo}
+Batch Information: ${batchInfo}
+Pathogen / Contamination: ${pathogenInfo}
+Temperature Excursions: ${temperatureInfo}
+Traceability: ${traceabilityInfo}
+Incident Description: ${incidentDescription}
+`.trim();
+
+    if (!scenarioText.replace(/[:\n\s]/g, '').trim()) {
+        return sendJSON(res, 400, { error: 'Please provide at least some scenario details for assessment' });
+    }
+
+    if (genAI) {
+        const prompt = RECALL_ASSESSMENT_PROMPT + scenarioText;
+        const reply = await callGemini([{ text: prompt }]);
+        if (reply) {
+            try {
+                let raw = reply.trim();
+                raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+                const assessment = JSON.parse(raw);
+                return sendJSON(res, 200, { source: 'ai', assessment });
+            } catch (parseErr) {
+                console.error('[Recall Assessment JSON parse error]', parseErr.message);
+            }
+        }
+    }
+
+    // Fallback assessment
+    return sendJSON(res, 200, {
+        source: 'fallback',
+        assessment: {
+            recallRiskScore: 72,
+            contaminationSeverity: 'High',
+            recallClassification: 'Class I - Dangerous',
+            recallNecessity: 'Immediate Mandatory Recall',
+            supplierRiskRating: 'High',
+            correctiveActions: [
+                'Immediately quarantine all units of the affected batch from distribution channels.',
+                'Notify FSSAI regional office within 24 hours as per Food Safety and Standards Act Section 28.',
+                'Conduct environmental swab testing across all production surfaces and equipment.',
+                'Issue public recall notice via approved FSSAI communication channels.',
+                'Review and update HACCP plan and supplier qualification procedures.'
+            ],
+            quarantineInstructions: 'Place all units of the affected batch under physical lock with a "QUARANTINE – DO NOT USE" label. Restrict access to authorized QA personnel only. Maintain cold chain if applicable. Document all batch numbers, production dates, and distribution records.',
+            supplierNotification: 'This is an urgent safety notification regarding a potential contamination risk identified in your supplied batch. Following FSSAI protocols, we are initiating an immediate quarantine and recall investigation. You are required to halt distribution of all units from this production run and cooperate fully with our quality assurance team within 24 hours. Please preserve all batch records, raw material certificates, and production logs for review.',
+            summary: 'AI Gemini service is temporarily unavailable. This fallback assessment indicates a high-risk scenario requiring immediate action based on general food safety principles.'
+        }
+    });
+}
+
+// -------------------------------------------------------
+// Handler: POST /api/voice-assistant
+// -------------------------------------------------------
+const VOICE_ASSISTANT_PROMPTS = {
+    'en-IN': `You are a food safety voice assistant for factory floor audits in India. The user is a QA auditor or floor supervisor speaking hands-free. Respond in clear, plain English. Your answer must be 2-3 sentences maximum, under 50 words, with no markdown, no bullet points, no headings. Focus only on food safety, FSSAI regulations, hygiene, HACCP, and factory audit situations.
+
+User query: `,
+    'hi-IN': `आप भारत में फैक्ट्री फ्लोर ऑडिट के लिए एक खाद्य सुरक्षा वॉयस असिस्टेंट हैं। उपयोगकर्ता एक QA ऑडिटर या फ्लोर सुपरवाइजर है। स्पष्ट हिंदी में उत्तर दें। उत्तर अधिकतम 2-3 वाक्य होना चाहिए, 50 शब्दों से कम। कोई मार्कडाउन या बुलेट पॉइंट नहीं। केवल खाद्य सुरक्षा, FSSAI नियम, स्वच्छता और HACCP पर ध्यान दें।
+
+उपयोगकर्ता का प्रश्न: `,
+    'ta-IN': `நீங்கள் இந்தியாவில் தொழிற்சாலை தள தணிக்கைகளுக்கான உணவு பாதுகாப்பு குரல் உதவியாளர். பயனர் ஒரு QA தணிக்கையாளர் அல்லது மேற்பார்வையாளர். தெளிவான தமிழில் பதிலளிக்கவும். பதில் அதிகபட்சம் 2-3 வாக்கியங்கள், 50 வார்த்தைகளுக்கும் குறைவாக இருக்க வேண்டும். மார்க்டவுன் வேண்டாம். உணவு பாதுகாப்பு, FSSAI விதிகள், சுகாதாரம் மற்றும் HACCP மட்டுமே கவனிக்கவும்.
+
+பயனர் கேள்வி: `
+};
+
+const VOICE_FALLBACK_ANSWERS = {
+    'en-IN': 'Under FSSAI Schedule 4, all food handling areas must maintain proper hygiene, temperature control, and pest prevention. Please refer to your facility HACCP plan for specific critical control limits.',
+    'hi-IN': 'FSSAI अनुसूची 4 के तहत, सभी खाद्य प्रसंस्करण क्षेत्रों में उचित स्वच्छता, तापमान नियंत्रण और कीट नियंत्रण अनिवार्य है। अधिक जानकारी के लिए अपने HACCP प्लान का संदर्भ लें।',
+    'ta-IN': 'FSSAI அட்டவணை 4 படி, அனைத்து உணவு பதப்படுத்தல் பகுதிகளிலும் சரியான சுகாதாரம், வெப்பநிலை கட்டுப்பாடு மற்றும் பூச்சி தடுப்பு கட்டாயம். உங்கள் HACCP திட்டத்தை பார்க்கவும்.'
+};
+
+async function handleVoiceAssistant(req, res) {
+    let body;
+    try { body = await readBody(req); }
+    catch (e) { return sendJSON(res, 400, { error: 'Invalid request body' }); }
+
+    const query = (body.query || '').trim();
+    const lang = body.lang || 'en-IN';
+
+    if (!query) return sendJSON(res, 400, { error: 'Query is required' });
+
+    const systemPrompt = VOICE_ASSISTANT_PROMPTS[lang] || VOICE_ASSISTANT_PROMPTS['en-IN'];
+
+    if (genAI) {
+        const reply = await callGemini([{ text: systemPrompt + query }]);
+        if (reply) {
+            // Strip any markdown the model might have included
+            let cleaned = reply.trim()
+                .replace(/\*\*([^*]+)\*\*/g, '$1')
+                .replace(/^#{1,6}\s+/gm, '')
+                .replace(/^[\*\-]\s+/gm, '')
+                .replace(/`([^`]+)`/g, '$1')
+                .replace(/\n{2,}/g, ' ')
+                .trim();
+            return sendJSON(res, 200, { source: 'ai', reply: cleaned, lang });
+        }
+    }
+
+    const fallback = VOICE_FALLBACK_ANSWERS[lang] || VOICE_FALLBACK_ANSWERS['en-IN'];
+    return sendJSON(res, 200, { source: 'fallback', reply: fallback, lang });
+}
+
 // -------------------------------------------------------
 // Main HTTP Server
 // -------------------------------------------------------
@@ -483,6 +776,15 @@ const server = http.createServer((req, res) => {
     }
     if (req.method === 'POST' && urlPath === '/api/validate-label') {
         return handleValidateLabel(req, res);
+    }
+    if (req.method === 'POST' && urlPath === '/api/analyze-document') {
+        return handleAnalyzeDocument(req, res);
+    }
+    if (req.method === 'POST' && urlPath === '/api/recall-assessment') {
+        return handleRecallAssessment(req, res);
+    }
+    if (req.method === 'POST' && urlPath === '/api/voice-assistant') {
+        return handleVoiceAssistant(req, res);
     }
 
     // ---- Static File Serving ----

@@ -621,67 +621,127 @@ Scope: Mixing Vats & Handwash Stations
         }
     };
 
-    function runDocumentAnalysis(docKey) {
+    // ---- Real AI document analysis renderer ----
+    function renderDocAnalysisResult(analysis, fallbackKey) {
+        docLoading.classList.add('hidden');
+        docResults.classList.remove('hidden');
+
+        const score = analysis.complianceScore;
+        docComplianceBadge.innerHTML = `<span class="compliance-score">${score}%</span> Score`;
+        const scoreEl = docComplianceBadge.querySelector('.compliance-score');
+        if (score >= 85) scoreEl.className = 'compliance-score text-success';
+        else if (score >= 70) scoreEl.className = 'compliance-score text-warning';
+        else scoreEl.className = 'compliance-score text-danger';
+
+        haccpAlign.textContent = analysis.haccpAlignment || '—';
+        fssaiAlign.textContent = analysis.fssaiSchedule4Status || '—';
+        riskAlign.textContent = analysis.safetyRiskLevel || '—';
+
+        haccpAlign.className = 'score-card-val text-success';
+        fssaiAlign.className = (analysis.fssaiSchedule4Status || '').includes('Critical') || (analysis.fssaiSchedule4Status || '').includes('Non-Compliant')
+            ? 'score-card-val text-danger'
+            : (analysis.fssaiSchedule4Status || '').includes('Compliant') ? 'score-card-val text-success' : 'score-card-val text-warning';
+        riskAlign.className = (analysis.safetyRiskLevel || '').includes('High') || (analysis.safetyRiskLevel || '').includes('Critical')
+            ? 'score-card-val text-danger'
+            : (analysis.safetyRiskLevel || '').includes('Medium') ? 'score-card-val text-warning' : 'score-card-val text-success';
+
+        gapList.innerHTML = '';
+        const gaps = Array.isArray(analysis.complianceGaps) ? analysis.complianceGaps : [];
+        if (gaps.length === 0) {
+            gapList.innerHTML = '<li class="gap-item" style="color:var(--text-success)"><i class="fa-solid fa-circle-check"></i> <span>No significant compliance gaps detected.</span></li>';
+        } else {
+            gaps.forEach(gap => {
+                const li = document.createElement('li');
+                li.className = 'gap-item';
+                li.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <span>${gap}</span>`;
+                gapList.appendChild(li);
+            });
+        }
+
+        correctionsList.innerHTML = '';
+        const corrections = Array.isArray(analysis.recommendedCorrections) ? analysis.recommendedCorrections : [];
+        if (corrections.length === 0) {
+            correctionsList.innerHTML = '<div class="correction-card"><span class="correction-title" style="color:var(--text-success)"><i class="fa-solid fa-circle-check"></i> No corrections required</span></div>';
+        } else {
+            corrections.forEach(corr => {
+                const card = document.createElement('div');
+                card.className = 'correction-card';
+                const title = document.createElement('span');
+                title.className = 'correction-title';
+                title.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${corr.title}`;
+                const code = document.createElement('div');
+                code.className = 'correction-text';
+                code.textContent = corr.text;
+                card.appendChild(title);
+                card.appendChild(code);
+                correctionsList.appendChild(card);
+            });
+        }
+    }
+
+    function renderDocFallback(docKey) {
+        const doc = templates[docKey] || templates['pest-control'];
+        docLoading.classList.add('hidden');
+        docResults.classList.remove('hidden');
+        docComplianceBadge.innerHTML = `<span class="compliance-score">${doc.score}%</span> Score`;
+        const scoreEl = docComplianceBadge.querySelector('.compliance-score');
+        if (doc.score >= 85) scoreEl.className = 'compliance-score text-success';
+        else if (doc.score >= 70) scoreEl.className = 'compliance-score text-warning';
+        else scoreEl.className = 'compliance-score text-danger';
+
+        haccpAlign.textContent = doc.haccp; fssaiAlign.textContent = doc.fssai; riskAlign.textContent = doc.risk;
+        haccpAlign.className = 'score-card-val text-success';
+        fssaiAlign.className = doc.fssai.includes('Critical') ? 'score-card-val text-danger' : 'score-card-val text-warning';
+        riskAlign.className = doc.risk.includes('High') ? 'score-card-val text-danger' : (doc.risk.includes('Medium') ? 'score-card-val text-warning' : 'score-card-val text-success');
+
+        gapList.innerHTML = '';
+        doc.gaps.forEach(gap => {
+            const li = document.createElement('li'); li.className = 'gap-item';
+            li.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <span>${gap}</span>`;
+            gapList.appendChild(li);
+        });
+        correctionsList.innerHTML = '';
+        doc.corrections.forEach(corr => {
+            const card = document.createElement('div'); card.className = 'correction-card';
+            const t = document.createElement('span'); t.className = 'correction-title'; t.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${corr.title}`;
+            const c = document.createElement('div'); c.className = 'correction-text'; c.textContent = corr.text;
+            card.appendChild(t); card.appendChild(c); correctionsList.appendChild(card);
+        });
+    }
+
+    async function runDocumentAnalysis(docKey) {
         const doc = templates[docKey];
-        
-        // Setup states
+
         docResults.classList.add('hidden');
         docLoading.classList.remove('hidden');
         docTitle.textContent = doc.title;
         document.querySelector('.file-size').textContent = doc.size;
         docContentViewer.innerHTML = doc.content;
 
-        setTimeout(() => {
-            // Populate Results
-            docLoading.classList.add('hidden');
-            docResults.classList.remove('hidden');
-            
-            docComplianceBadge.innerHTML = `<span class="compliance-score">${doc.score}%</span> Score`;
-            
-            // Adjust score text color
-            const scoreElement = docComplianceBadge.querySelector('.compliance-score');
-            if (doc.score >= 85) scoreElement.className = 'compliance-score text-success';
-            else if (doc.score >= 70) scoreElement.className = 'compliance-score text-warning';
-            else scoreElement.className = 'compliance-score text-danger';
+        try {
+            // Strip HTML tags from content to get plain text for the API
+            const plainText = doc.content.replace(/<[^>]+>/g, '').replace(/&[a-z]+;/gi, ' ').trim();
+            const formData = new FormData();
+            formData.append('text', plainText);
+            formData.append('filename', doc.title);
 
-            haccpAlign.textContent = doc.haccp;
-            fssaiAlign.textContent = doc.fssai;
-            riskAlign.textContent = doc.risk;
-
-            // Class status labels
-            haccpAlign.className = 'score-card-val text-success';
-            fssaiAlign.className = doc.fssai.includes('Critical') ? 'score-card-val text-danger' : 'score-card-val text-warning';
-            riskAlign.className = doc.risk.includes('High') ? 'score-card-val text-danger' : (doc.risk.includes('Medium') ? 'score-card-val text-warning' : 'score-card-val text-success');
-
-            // Render gaps
-            gapList.innerHTML = '';
-            doc.gaps.forEach(gap => {
-                const li = document.createElement('li');
-                li.className = 'gap-item';
-                li.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <span>${gap}</span>`;
-                gapList.appendChild(li);
+            const response = await fetch('/api/analyze-document', {
+                method: 'POST',
+                body: formData
             });
 
-            // Render corrections
-            correctionsList.innerHTML = '';
-            doc.corrections.forEach(corr => {
-                const card = document.createElement('div');
-                card.className = 'correction-card';
-                
-                const title = document.createElement('span');
-                title.className = 'correction-title';
-                title.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${corr.title}`;
-                
-                const code = document.createElement('div');
-                code.className = 'correction-text';
-                code.textContent = corr.text;
+            if (!response.ok) throw new Error('Server error ' + response.status);
+            const data = await response.json();
 
-                card.appendChild(title);
-                card.appendChild(code);
-                correctionsList.appendChild(card);
-            });
-
-        }, 1500);
+            if (data.source === 'ai' && data.analysis) {
+                renderDocAnalysisResult(data.analysis, docKey);
+            } else {
+                renderDocFallback(docKey);
+            }
+        } catch (err) {
+            console.error('[Doc Analysis Error]', err.message);
+            renderDocFallback(docKey);
+        }
     }
 
     templateBtns.forEach(btn => {
@@ -696,7 +756,7 @@ Scope: Mixing Vats & Handwash Stations
     // Run first analysis initially
     runDocumentAnalysis('pest-control');
 
-    // Drag and Drop simulation
+    // Drag and Drop styling
     uploadZone.addEventListener('dragover', (e) => {
         e.preventDefault();
         uploadZone.style.borderColor = 'var(--teal)';
@@ -712,52 +772,80 @@ Scope: Mixing Vats & Handwash Stations
         e.preventDefault();
         uploadZone.style.borderColor = 'var(--border-glass-active)';
         uploadZone.style.backgroundColor = 'rgba(0, 0, 0, 0.15)';
-        
         const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            handleFileUpload(files[0]);
-        }
+        if (files.length > 0) { handleFileUpload(files[0]); }
     });
 
-    uploadZone.addEventListener('click', () => {
-        docFileInput.click();
-    });
+    uploadZone.addEventListener('click', () => { docFileInput.click(); });
 
     docFileInput.addEventListener('change', () => {
-        if (docFileInput.files.length > 0) {
-            handleFileUpload(docFileInput.files[0]);
-        }
+        if (docFileInput.files.length > 0) { handleFileUpload(docFileInput.files[0]); }
     });
 
-    function handleFileUpload(file) {
+    async function handleFileUpload(file) {
         docResults.classList.add('hidden');
         docLoading.classList.remove('hidden');
         docTitle.textContent = file.name;
         document.querySelector('.file-size').textContent = `${(file.size / 1024).toFixed(1)} KB`;
-        docContentViewer.innerHTML = `Simulating upload analysis of document:\n"${file.name}"\n\nFile format confirmed. Standard raw text parser running NLP entities scanner...`;
+        docContentViewer.innerHTML = `Uploading and analyzing: "${file.name}"\n\nSending to AI compliance engine...`;
 
-        setTimeout(() => {
+        const acceptedTypes = ['text/plain', 'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!acceptedTypes.includes(file.type) && !['txt','pdf','doc','docx'].includes(ext)) {
             docLoading.classList.add('hidden');
             docResults.classList.remove('hidden');
-            docComplianceBadge.innerHTML = `<span class="compliance-score text-warning">78%</span> Score`;
-            haccpAlign.textContent = '8/10';
-            fssaiAlign.textContent = 'Minor Gaps';
-            riskAlign.textContent = 'Low Risk';
-            
-            gapList.innerHTML = `
-                <li class="gap-item" style="color: #FBD38D; border-color: rgba(221, 107, 32, 0.15); background-color: rgba(221, 107, 32, 0.03);">
-                    <i class="fa-solid fa-triangle-exclamation" style="color: var(--warning)"></i> 
-                    <span>Document contains general hygiene protocols but lacks specific critical control limit metrics (CCPs).</span>
-                </li>
-            `;
-            
-            correctionsList.innerHTML = `
-                <div class="correction-card" style="border-color: var(--border-glass)">
-                    <span class="correction-title" style="color: var(--text-secondary)"><i class="fa-solid fa-circle-info"></i> Recommendation</span>
-                    <div class="correction-text">“Please append standard HACCP CCP sheets detailing limits, probe numbers, and safety tolerances at the end of the document.”</div>
-                </div>
-            `;
-        }, 1500);
+            gapList.innerHTML = '<li class="gap-item"><i class="fa-solid fa-circle-xmark text-danger"></i> <span>Unsupported file type. Please upload TXT, PDF, or DOCX files only.</span></li>';
+            correctionsList.innerHTML = '';
+            docComplianceBadge.innerHTML = '<span class="compliance-score text-danger">Error</span>';
+            return;
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('document', file);
+
+            const response = await fetch('/api/analyze-document', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                // Show server error message
+                docLoading.classList.add('hidden');
+                docResults.classList.remove('hidden');
+                gapList.innerHTML = `<li class="gap-item"><i class="fa-solid fa-circle-xmark text-danger"></i> <span>${data.error || 'Analysis failed.'}</span></li>`;
+                correctionsList.innerHTML = '';
+                docComplianceBadge.innerHTML = '<span class="compliance-score text-danger">Error</span>';
+                haccpAlign.textContent = '—'; fssaiAlign.textContent = '—'; riskAlign.textContent = '—';
+                return;
+            }
+
+            if (data.source === 'ai' && data.analysis) {
+                renderDocAnalysisResult(data.analysis, null);
+            } else {
+                // Fallback: show generic result
+                docLoading.classList.add('hidden');
+                docResults.classList.remove('hidden');
+                docComplianceBadge.innerHTML = '<span class="compliance-score text-warning">78%</span> Score';
+                haccpAlign.textContent = '8/10'; fssaiAlign.textContent = 'Minor Gaps'; riskAlign.textContent = 'Low Risk';
+                haccpAlign.className = 'score-card-val text-success';
+                fssaiAlign.className = 'score-card-val text-warning';
+                riskAlign.className = 'score-card-val text-warning';
+                gapList.innerHTML = '<li class="gap-item"><i class="fa-solid fa-triangle-exclamation"></i> <span>Document contains general hygiene protocols but lacks specific critical control limit metrics (CCPs).</span></li>';
+                correctionsList.innerHTML = '<div class="correction-card"><span class="correction-title"><i class="fa-solid fa-circle-info"></i> Recommendation</span><div class="correction-text">"Please append standard HACCP CCP sheets detailing limits, probe numbers, and safety tolerances at the end of the document."</div></div>';
+            }
+        } catch (err) {
+            console.error('[File Upload Error]', err.message);
+            docLoading.classList.add('hidden');
+            docResults.classList.remove('hidden');
+            gapList.innerHTML = '<li class="gap-item"><i class="fa-solid fa-circle-xmark text-danger"></i> <span>Network error. Could not reach AI analysis server.</span></li>';
+            correctionsList.innerHTML = '';
+            docComplianceBadge.innerHTML = '<span class="compliance-score text-danger">Error</span>';
+        }
     }
 
 
@@ -1221,33 +1309,115 @@ Scope: Mixing Vats & Handwash Stations
         });
     }
 
-    function quarantineAction(supplierId) {
-        // Update table item state
+    // Supplier notification modal (in-app, no browser alert)
+    function showSupplierNotificationModal(supplierId, batchId, notificationText, assessmentData) {
+        // Remove any existing modal
+        const existing = document.getElementById('supplier-notify-modal');
+        if (existing) existing.remove();
+
+        const classification = assessmentData ? assessmentData.recallClassification || 'Class I - Dangerous' : 'Class I - Dangerous';
+        const riskScore = assessmentData ? assessmentData.recallRiskScore || '--' : '--';
+        const necessity = assessmentData ? assessmentData.recallNecessity || 'Immediate Mandatory Recall' : 'Immediate Mandatory Recall';
+
+        const modal = document.createElement('div');
+        modal.id = 'supplier-notify-modal';
+        modal.className = 'modal-overlay';
+        modal.style.cssText = 'display:flex;';
+        modal.innerHTML = `
+            <div class="modal-card" style="max-width:560px;width:100%;">
+                <div class="modal-header">
+                    <h3><i class="fa-solid fa-envelope text-danger"></i> Supplier Alert Notification — ${supplierId}</h3>
+                    <button class="modal-close" id="btn-close-notify-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="audit-summary-box" style="margin-bottom:1rem;">
+                        <p><strong>Supplier:</strong> ${supplierId} | <strong>Batch:</strong> ${batchId}</p>
+                        <p><strong>Classification:</strong> <span style="color:var(--danger);font-weight:600;">${classification}</span></p>
+                        <p><strong>Risk Score:</strong> ${riskScore}/100 | <strong>Action:</strong> ${necessity}</p>
+                    </div>
+                    <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem;">NOTIFICATION MESSAGE (AI-Generated):</p>
+                    <div style="background:rgba(0,0,0,0.2);border:1px solid var(--border-glass);border-radius:8px;padding:1rem;font-size:0.85rem;line-height:1.6;color:var(--text-primary);">
+                        ${notificationText || 'This is an urgent safety notification. Please quarantine the affected batch immediately and await further instructions from our QA team.'}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-danger" id="btn-copy-notify"><i class="fa-solid fa-copy"></i> Copy Message</button>
+                    <button class="btn btn-text" id="btn-dismiss-notify">Dismiss</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const closeNotify = () => modal.remove();
+        document.getElementById('btn-close-notify-modal').addEventListener('click', closeNotify);
+        document.getElementById('btn-dismiss-notify').addEventListener('click', closeNotify);
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeNotify(); });
+        document.getElementById('btn-copy-notify').addEventListener('click', () => {
+            navigator.clipboard.writeText(notificationText || '').then(() => {
+                document.getElementById('btn-copy-notify').textContent = '✓ Copied!';
+                setTimeout(() => { document.getElementById('btn-copy-notify').innerHTML = '<i class="fa-solid fa-copy"></i> Copy Message'; }, 2000);
+            }).catch(() => {});
+        });
+    }
+
+    // Last AI assessment cache for the action panel
+    let lastRecallAssessment = null;
+
+    async function quarantineAction(supplierId) {
         const target = supplierData.find(s => s.id === supplierId);
-        if (target) {
-            target.status = 'quarantined';
-            target.risk = '12%'; // risk drops once quarantined
-            updateSupplierTable();
+        if (!target) return;
 
-            // Update stats indicators on metrics row
-            document.getElementById('metric-risk-index').textContent = 'Moderate (35%)';
-            document.getElementById('metric-risk-index').className = 'metric-value text-warning';
-            
-            document.getElementById('metric-alert-count').textContent = '1 Active';
-            
-            document.getElementById('metric-quarantine-count').textContent = '15 Batches';
+        // Show loading state in action panel
+        actionDetailsPanel.innerHTML = `
+            <div style="text-align:center;padding:1rem;color:var(--text-secondary);">
+                <div class="spinner" style="margin:0 auto 0.5rem;"></div>
+                <p>Running AI recall risk assessment for Batch ${target.batch}...</p>
+            </div>
+        `;
 
-            // Add alert to feed
-            initialFeedAlerts.unshift({
-                time: 'Just now',
-                type: 'warning',
-                text: `Batch ${target.batch} from Supplier ${target.id} was legally quarantined. Containment procedures initiated.`
+        // Call the AI recall assessment API
+        try {
+            const response = await fetch('/api/recall-assessment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    supplierInfo: `Supplier ID: ${target.id}`,
+                    batchInfo: `Batch: ${target.batch}`,
+                    pathogenInfo: target.pathogen,
+                    temperatureInfo: 'Temperature deviation detected in logistics transport',
+                    traceabilityInfo: 'Batch traceability records available',
+                    incidentDescription: `${target.pathogen} detected in supplier ${target.id} batch ${target.batch}. Risk probability: ${target.risk}.`
+                })
             });
-            renderFeed();
-
-            // Update Action panel
-            renderActionPanel();
+            const data = await response.json();
+            lastRecallAssessment = data.assessment || null;
+        } catch (err) {
+            console.error('[Recall Assessment error]', err);
+            lastRecallAssessment = null;
         }
+
+        // Update supplier state
+        target.status = 'quarantined';
+        const riskScore = lastRecallAssessment ? lastRecallAssessment.recallRiskScore : null;
+        target.risk = riskScore ? riskScore + '%' : '12%';
+        updateSupplierTable();
+
+        // Update metrics
+        document.getElementById('metric-risk-index').textContent = 'Moderate (35%)';
+        document.getElementById('metric-risk-index').className = 'metric-value text-warning';
+        document.getElementById('metric-alert-count').textContent = '1 Active';
+        document.getElementById('metric-quarantine-count').textContent = '15 Batches';
+
+        // Build feed message
+        const classification = lastRecallAssessment ? lastRecallAssessment.recallClassification || '' : '';
+        const classTag = classification ? ` [${classification}]` : '';
+        initialFeedAlerts.unshift({
+            time: 'Just now',
+            type: 'warning',
+            text: `Batch ${target.batch} from Supplier ${target.id} quarantined.${classTag} AI risk score: ${target.risk}. Containment procedures initiated.`
+        });
+        renderFeed();
+        renderActionPanel();
     }
 
     function clearAction(supplierId) {
@@ -1255,12 +1425,12 @@ Scope: Mixing Vats & Handwash Stations
         if (target) {
             target.status = 'cleared';
             target.risk = '5%';
+            lastRecallAssessment = null;
             updateSupplierTable();
-
             initialFeedAlerts.unshift({
                 time: 'Just now',
                 type: 'info',
-                text: `Batch ${target.batch} cleared from warning quarantine post sanitation tests.`
+                text: `Batch ${target.batch} cleared from quarantine after sanitation tests. Supplier ${target.id} reinstated.`
             });
             renderFeed();
             renderActionPanel();
@@ -1269,23 +1439,61 @@ Scope: Mixing Vats & Handwash Stations
 
     function renderActionPanel() {
         const highestRisk = supplierData.find(s => s.status === 'monitored');
-        
+
         if (highestRisk) {
+            const assessment = lastRecallAssessment;
+            const riskInfo = assessment
+                ? `AI Risk Score: <strong>${assessment.recallRiskScore}/100</strong> | ${assessment.recallClassification}`
+                : `High probability ${highestRisk.pathogen} contamination risk detected.`;
+            const instruction = assessment
+                ? assessment.quarantineInstructions || 'FSSAI Chapter 3 compliance requires physical quarantine of the batch and formal supplier diagnostic auditing.'
+                : 'FSSAI Chapter 3 compliance requires physical quarantine of the batch and formal supplier diagnostic auditing.';
+
             actionDetailsPanel.innerHTML = `
                 <div class="action-meta">TARGET: SUPPLIER ${highestRisk.id} | BATCH ${highestRisk.batch} | PROBABILITY: ${highestRisk.risk}</div>
-                <div class="action-instruction">High probability E. coli trace contamination risk detected. FSSAI Chapter 3 compliance requires physical quarantine of the batch and formal supplier diagnostic auditing.</div>
+                <div class="action-instruction" style="margin-bottom:0.5rem;">${riskInfo}</div>
+                <div class="action-instruction">${instruction}</div>
                 <div class="action-buttons">
                     <button class="btn btn-teal" id="btn-quarantine-now"><i class="fa-solid fa-ban"></i> Quarantine Batch</button>
                     <button class="btn btn-secondary" id="btn-notify-supplier"><i class="fa-solid fa-envelope"></i> Send Alert Email</button>
                 </div>
             `;
-            
+
             document.getElementById('btn-quarantine-now').addEventListener('click', () => {
                 quarantineAction(highestRisk.id);
             });
 
-            document.getElementById('btn-notify-supplier').addEventListener('click', () => {
-                alert(`Simulation: Warning notification dispatched to Supplier ${highestRisk.id} regarding Batch ${highestRisk.batch} contamination levels.`);
+            document.getElementById('btn-notify-supplier').addEventListener('click', async () => {
+                const btn = document.getElementById('btn-notify-supplier');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+
+                let notifText = '';
+                let assessmentData = lastRecallAssessment;
+
+                if (!assessmentData) {
+                    try {
+                        const resp = await fetch('/api/recall-assessment', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                supplierInfo: `Supplier ID: ${highestRisk.id}`,
+                                batchInfo: `Batch: ${highestRisk.batch}`,
+                                pathogenInfo: highestRisk.pathogen,
+                                incidentDescription: `${highestRisk.pathogen} detected in supplier ${highestRisk.id} batch ${highestRisk.batch}.`
+                            })
+                        });
+                        const d = await resp.json();
+                        assessmentData = d.assessment || null;
+                        lastRecallAssessment = assessmentData;
+                    } catch (_) {}
+                }
+
+                notifText = assessmentData ? assessmentData.supplierNotification : `This is an urgent safety notification regarding potential contamination risk in Batch ${highestRisk.batch}. Following FSSAI protocols, we are initiating an immediate quarantine and recall investigation. Please halt distribution of all units from this production run and cooperate with our QA team within 24 hours.`;
+
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-envelope"></i> Send Alert Email';
+                showSupplierNotificationModal(highestRisk.id, highestRisk.batch, notifText, assessmentData);
             });
         } else {
             actionDetailsPanel.innerHTML = `
@@ -1408,32 +1616,50 @@ Scope: Mixing Vats & Handwash Stations
         voiceConversation.scrollTop = voiceConversation.scrollHeight;
     }
 
-    function triggerVoiceSimulation(utteranceText, lang) {
+    async function triggerVoiceSimulation(utteranceText, lang) {
         // Stop current speaking
         if ('speechSynthesis' in window) window.speechSynthesis.cancel();
 
         // user bubble
         appendSpeechBubble('user', 'QA Auditor', `"${utteranceText}"`);
-        
+
         // visual soundwave active during thinking/listening
         soundwave.classList.add('wave-active');
-        micStatusLabel.textContent = 'Analyzing speech database...';
+        micStatusLabel.textContent = 'Consulting AI food safety database...';
 
-        setTimeout(() => {
-            soundwave.classList.remove('wave-active');
-            
-            // match responses
+        let replyText = '';
+
+        try {
+            const response = await fetch('/api/voice-assistant', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: utteranceText, lang })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                replyText = data.reply || '';
+            }
+        } catch (err) {
+            console.error('[Voice API error]', err.message);
+        }
+
+        // If API failed or returned empty, use local fallback
+        if (!replyText.trim()) {
             const responses = voiceAnswers[lang] || voiceAnswers['en-IN'];
-            let replyText = responses[utteranceText] || responses['default'];
-            
-            // assistant bubble
-            appendSpeechBubble('assistant', 'AI Safety Assistant', replyText);
-            micStatusLabel.textContent = 'Click the microphone and say a command';
-            
-            // Speak reply
-            speakText(replyText, lang);
+            replyText = responses[utteranceText] || responses['default'];
+        }
 
-        }, 1200);
+        soundwave.classList.remove('wave-active');
+
+
+
+        // assistant bubble
+        appendSpeechBubble('assistant', 'AI Safety Assistant', replyText);
+        micStatusLabel.textContent = 'Click the microphone and say a command';
+
+        // Speak reply via TTS
+        speakText(replyText, lang);
     }
 
     // Mic triggers Speech Recognition or Fallback Simulation
