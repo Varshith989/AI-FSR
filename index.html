@@ -531,12 +531,12 @@
                     <div class="glass-panel voice-console-card">
                         <div class="voice-header">
                             <div class="agent-profile">
-                                <div class="voice-avatar-glow" aria-hidden="true">
+                                <div class="voice-avatar-glow" id="voice-avatar-glow" aria-hidden="true">
                                     <div class="voice-avatar-inner"><i class="fa-solid fa-microphone-lines"></i></div>
                                 </div>
                                 <div class="agent-text">
                                     <h3>SafeFood Voice Agent</h3>
-                                    <p>Hands-free factory floor audits</p>
+                                    <p>Hands-free factory floor audits & real-time compliance voice QA</p>
                                 </div>
                             </div>
                             <div class="voice-language-selector">
@@ -550,6 +550,7 @@
                                 </div>
                             </div>
                         </div>
+
                         <div class="soundwave-container" id="soundwave-container" aria-hidden="true">
                             <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
                             <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
@@ -557,18 +558,50 @@
                             <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
                             <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
                         </div>
+
                         <div class="voice-action-center">
-                            <button class="mic-trigger-btn" id="btn-mic-trigger" aria-label="Start voice recognition — click to speak">
+                            <button class="mic-trigger-btn" id="btn-mic-trigger" aria-label="Start voice recognition — click to speak" aria-pressed="false">
                                 <i class="fa-solid fa-microphone" aria-hidden="true"></i>
                             </button>
-                            <p class="mic-status-label" id="mic-status-label" aria-live="polite">Click the microphone and say a command</p>
+                            <p class="mic-status-label" id="mic-status-label" aria-live="polite">Click the microphone to speak, or tap any quick command below</p>
+                            
+                            <div class="live-transcript-box hidden" id="voice-live-transcript-box" aria-live="polite">
+                                <span class="live-dot"></span>
+                                <span class="live-text" id="voice-live-transcript-text">Listening...</span>
+                            </div>
+
+                            <div class="voice-aux-controls">
+                                <button class="voice-aux-btn" id="btn-stop-speech" type="button" title="Stop audio playback" disabled>
+                                    <i class="fa-solid fa-volume-xmark" aria-hidden="true"></i> Stop Audio
+                                </button>
+                                <button class="voice-aux-btn" id="btn-clear-voice" type="button" title="Clear conversation history">
+                                    <i class="fa-solid fa-trash-can" aria-hidden="true"></i> Clear History
+                                </button>
+                            </div>
+
+                            <form id="voice-quick-input-form" class="voice-input-bar" role="search">
+                                <div class="voice-input-wrapper">
+                                    <i class="fa-solid fa-keyboard voice-input-icon" aria-hidden="true"></i>
+                                    <input type="text" id="voice-text-input" placeholder="Or type a question (e.g. Verify shelf life for milk)..." autocomplete="off" aria-label="Type regulatory question for voice agent" />
+                                </div>
+                                <button type="submit" id="btn-voice-send" class="btn-voice-send" aria-label="Submit question">
+                                    <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+                                </button>
+                            </form>
                         </div>
+
                         <div class="speech-logs-container">
-                            <h4>Conversation Stream</h4>
+                            <div class="speech-logs-header">
+                                <h4>Conversation Stream</h4>
+                                <span class="voice-stream-badge" id="voice-stream-badge"><i class="fa-solid fa-headset" aria-hidden="true"></i> Live Audio QA</span>
+                            </div>
                             <div class="speech-conversation" id="voice-conversation-stream" role="log" aria-live="polite" aria-label="Voice conversation">
                                 <div class="speech-bubble assistant">
-                                    <span class="speaker-tag">AI Agent</span>
-                                    <p class="speech-text" id="voice-intro-text">Hello! I am ready to assist you. Select your language, click the microphone, and ask a safety regulation question. For example: "Verify shelf life for milk" or "What is storage rule?"</p>
+                                    <div class="speech-bubble-header">
+                                        <span class="speaker-tag">AI Safety Assistant</span>
+                                        <button class="speech-replay-btn" aria-label="Replay audio" title="Replay audio response"><i class="fa-solid fa-volume-high" aria-hidden="true"></i></button>
+                                    </div>
+                                    <p class="speech-text" id="voice-intro-text">Hello! SafeFood Voice Agent is ready. Select your language, click the microphone, or type a question. For example: "Verify shelf life for milk", "Check restaurant hygiene rules", or "What license do I need?"</p>
                                 </div>
                             </div>
                         </div>
@@ -578,36 +611,46 @@
                         <div class="panel-header">
                             <div class="header-icon-title">
                                 <i class="fa-solid fa-circle-info text-blue" aria-hidden="true"></i>
-                                <h3>Quick-Trigger Commands</h3>
+                                <h3>Quick-Trigger Spoken Audits</h3>
                             </div>
                         </div>
                         <div class="instructions-body">
-                            <p>Click any chip below to simulate that spoken command instantly:</p>
+                            <p>Click any phrase to trigger speech simulation with full AI response and voice playback:</p>
+                            
                             <div class="quick-command-section">
-                                <h5>English Commands</h5>
+                                <h5><i class="fa-solid fa-language" aria-hidden="true"></i> English Commands</h5>
                                 <div class="voice-chips-container">
+                                    <button class="voice-chip-btn" data-lang="en-IN" data-utterance="verify shelf life for milk">"Verify shelf life for milk"</button>
                                     <button class="voice-chip-btn" data-lang="en-IN" data-utterance="check restaurant hygiene rule">"Check restaurant hygiene rule"</button>
                                     <button class="voice-chip-btn" data-lang="en-IN" data-utterance="what are organic food logo regulations">"What are organic food logo regulations?"</button>
                                     <button class="voice-chip-btn" data-lang="en-IN" data-utterance="recommend corrective action for bacteria">"Recommend corrective action for bacteria"</button>
+                                    <button class="voice-chip-btn" data-lang="en-IN" data-utterance="what storage temperature is required for chilled food">"What storage temperature is required?"</button>
                                 </div>
                             </div>
+
                             <div class="quick-command-section">
-                                <h5>हिंदी कमांड (Hindi)</h5>
+                                <h5><i class="fa-solid fa-language" aria-hidden="true"></i> हिंदी कमांड (Hindi)</h5>
                                 <div class="voice-chips-container">
                                     <button class="voice-chip-btn" data-lang="hi-IN" data-utterance="डेयरी उत्पाद शेल्फ लाइफ नियम क्या है">"डेयरी उत्पाद शेल्फ लाइफ नियम क्या है?"</button>
                                     <button class="voice-chip-btn" data-lang="hi-IN" data-utterance="हलाल और शाकाहारी मार्क नियम क्या है">"शाकाहारी भोजन का निशान क्या है?"</button>
+                                    <button class="voice-chip-btn" data-lang="hi-IN" data-utterance="रेस्टोरेंट के लिए स्वच्छता नियम क्या हैं">"रेस्टोरेंट के लिए स्वच्छता नियम क्या हैं?"</button>
+                                    <button class="voice-chip-btn" data-lang="hi-IN" data-utterance="एफएसएसएआई लाइसेंस कैसे प्राप्त करें">"एफएसएसएआई लाइसेंस कैसे प्राप्त करें?"</button>
                                 </div>
                             </div>
+
                             <div class="quick-command-section">
-                                <h5>தமிழ் கட்டளைகள் (Tamil)</h5>
+                                <h5><i class="fa-solid fa-language" aria-hidden="true"></i> தமிழ் கட்டளைகள் (Tamil)</h5>
                                 <div class="voice-chips-container">
                                     <button class="voice-chip-btn" data-lang="ta-IN" data-utterance="உணவு பாதுகாப்பு உரிமம் பெறுவது எப்படி">"உணவு பாதுகாப்பு உரிமம் பெறுவது எப்படி?"</button>
                                     <button class="voice-chip-btn" data-lang="ta-IN" data-utterance="உணவு லேபிள் விதிகள் என்ன">"உணவு லேபிள் விதிகள் என்ன?"</button>
+                                    <button class="voice-chip-btn" data-lang="ta-IN" data-utterance="பால் சேமிப்பு வெப்பநிலை மற்றும் நாட்கள் என்ன">"பால் சேமிப்பு வெப்பநிலை என்ன?"</button>
+                                    <button class="voice-chip-btn" data-lang="ta-IN" data-utterance="பாக்டீரியா தொற்று தடுப்பு நடவடிக்கை என்ன">"பாக்டீரியா தடுப்பு நடவடிக்கை என்ன?"</button>
                                 </div>
                             </div>
+
                             <div class="browser-support-alert warning-alert" id="speech-support-alert" style="display:none;" role="alert">
-                                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-                                <p>Speech Recognition is not supported by your browser. Use the quick-trigger buttons above to test AI responses.</p>
+                                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                                <p>Microphone speech recognition is not supported in this browser environment. You can use the Quick Commands or type in the console bar to get full voice spoken answers.</p>
                             </div>
                         </div>
                     </div>

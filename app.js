@@ -897,108 +897,422 @@ setInterval(() => {
 }, 15000);
 
 /* -------------------------------------------------------
-   MODULE 6: MULTILINGUAL VOICE AGENT
+   MODULE 6: MULTILINGUAL VOICE AGENT (AI-Powered & Hands-Free)
    ------------------------------------------------------- */
-const voiceLangSelect    = document.getElementById('voice-lang');
-const soundwave          = document.getElementById('soundwave-container');
-const btnMicTrigger      = document.getElementById('btn-mic-trigger');
-const micStatusLabel     = document.getElementById('mic-status-label');
-const voiceConversation  = document.getElementById('voice-conversation-stream');
-const quickVoiceChips    = document.querySelectorAll('.voice-chip-btn');
-const speechSupportAlert = document.getElementById('speech-support-alert');
+const voiceLangSelect      = document.getElementById('voice-lang');
+const soundwave            = document.getElementById('soundwave-container');
+const btnMicTrigger        = document.getElementById('btn-mic-trigger');
+const micStatusLabel       = document.getElementById('mic-status-label');
+const voiceConversation    = document.getElementById('voice-conversation-stream');
+const quickVoiceChips      = document.querySelectorAll('.voice-chip-btn');
+const speechSupportAlert   = document.getElementById('speech-support-alert');
+const liveTranscriptBox    = document.getElementById('voice-live-transcript-box');
+const liveTranscriptText   = document.getElementById('voice-live-transcript-text');
+const btnStopSpeech        = document.getElementById('btn-stop-speech');
+const btnClearVoice        = document.getElementById('btn-clear-voice');
+const voiceQuickInputForm  = document.getElementById('voice-quick-input-form');
+const voiceTextInput       = document.getElementById('voice-text-input');
+const tabVoiceAgent        = document.getElementById('tab-voice-agent');
 
-const voiceAnswers = {
+// Client-side fallback knowledge for instant zero-latency responses
+const clientVoiceAnswers = {
     'en-IN': {
-        'check restaurant hygiene rule': 'Under FSSAI Schedule 4, restaurants must maintain potable water testing records, segregate foods properly, keep products off the ground, and ensure handlers have medical certification.',
-        'what are organic food logo regulations': 'Organic packages must carry the Jaivik Bharat organic symbol alongside the FSSAI logo. The logo features a leaf and circle representing natural purity.',
-        'recommend corrective action for bacteria': 'For bacterial contamination: quarantine the batch immediately, sanitize with quaternary ammonium at 200 ppm, and increase pasteurization to 72°C for 15 seconds.',
-        'default': 'I received your command. FSSAI standards suggest checking raw material logs and scheduling regular cleaning sessions. Please repeat your query clearly.'
+        'milk': 'Under FSSAI rules, pasteurized milk must be refrigerated below 4°C and used within 2 to 3 days. UHT milk in sealed aseptic packs lasts up to 90 days at room temperature.',
+        'dairy': 'Store dairy products below 4°C. Check temperature logs daily and verify package hermetic seal integrity before dispatch.',
+        'hygiene': 'FSSAI Schedule 4 mandates sanitized surfaces, potable water, medical certificates for handlers, and wearing clean aprons and hairnets.',
+        'organic': 'Certified organic food in India must carry the Jaivik Bharat symbol and the 14-digit FSSAI license number on the label.',
+        'bacteria': 'Immediately quarantine the contaminated batch, sanitize contact equipment with food-grade disinfectants, and verify pasteurization temperature logs.',
+        'temperature': 'Keep cold food below 4°C, hot held food above 65°C, and frozen storage at or below minus 18°C with daily recorded calibration.',
+        'license': 'Basic Registration applies up to ₹12 Lakhs annual turnover, State License from ₹12 Lakhs to ₹20 Crores, and Central License above ₹20 Crores.',
+        'default': 'FSSAI compliance requires standard operating procedures, potable water testing, staff hygiene controls, and Schedule 4 inspection logs.'
     },
     'hi-IN': {
-        'डेयरी उत्पाद शेल्फ लाइफ नियम क्या है': 'एफएसएसएआई के नियमों के अनुसार, पास्चुरीकृत दूध को 4°C से कम तापमान पर रखा जाना चाहिए। इसकी शेल्फ लाइफ 2 से 3 दिन की होती है।',
-        'हलाल और शाकाहारी मार्क नियम क्या है': 'शाकाहारी भोजन के लिए पैकेज पर हरे रंग का बिंदु होना अनिवार्य है — एक चौकोर हरे बॉक्स के अंदर हरा गोल बिंदु।',
-        'default': 'मुझे आपका निर्देश मिल गया है। खाद्य सुरक्षा नियमों का पालन करें और स्वच्छता बनाए रखें।'
+        'दूध': 'एफएसएसएआई के अनुसार पास्चुरीकृत दूध को 4 डिग्री से कम तापमान पर रखें। यह 2 से 3 दिन तक सुरक्षित रहता है।',
+        'डेयरी': 'डेयरी उत्पादों को 4 डिग्री सेल्सियस से कम तापमान पर रखें और समाप्ति तिथि की नियमित जांच करें।',
+        'शाकाहारी': 'शाकाहारी भोजन पर हरे रंग का चौकोर निशान और जैविक खाद्य पदार्थों पर जैविक भारत लोगो अनिवार्य है।',
+        'स्वच्छता': 'शेड्यूल 4 के तहत रसोई को रोगाणुमुक्त रखें, पीने योग्य पानी का उपयोग करें और सभी कर्मी हेयरनेट और एप्रन पहनें।',
+        'लाइसेंस': '12 लाख तक के कारोबार पर बेसिक रजिस्ट्रेशन, 12 लाख से 20 करोड़ तक स्टेट लाइसेंस और 20 करोड़ से अधिक पर सेंट्रल लाइसेंस अनिवार्य है।',
+        'बैक्टीरिया': 'जीवाणु संक्रमण पाए जाने पर बैच को तुरंत अलग करें, सतहों को सैनिटाइज करें और तापमान लॉग की दोबारा जांच करें।',
+        'default': 'मुझे आपका निर्देश मिल गया है। खाद्य सुरक्षा नियमों का पालन करें, साफ-सफाई बनाए रखें और दैनिक स्वच्छता लॉग दर्ज करें।'
     },
     'ta-IN': {
-        'உணவு பாதுகாப்பு உரிமம் பெறுவது எப்படி': 'வருடாந்திர வருவாய் ₹12 லட்சத்திற்கு மேல் இருந்தால் மாநில உரிமம் தேவை. ₹20 கோடிக்கு மேல் மத்திய உரிமம் கட்டாயம்.',
-        'உணவு லேபிள் விதிகள் என்ன': 'உணவு லேபிள்களில் தயாரிப்பாளர் முகவரி, காலாவதி தேதி, ஊட்டச்சத்து விவரங்கள் மற்றும் அலர்ஜி எச்சரிக்கைகள் கட்டாயம் இருக்க வேண்டும்.',
-        'default': 'உங்கள் கட்டளை ஏற்றுக்கொள்ளப்பட்டது. உணவு பாதுகாப்பு சட்டத்தின்படி தரம் சரிபார்க்கப்படும்.'
+        'பால்': 'பாஸ்சுரைஸ் செய்த பாலை 4 டிகிரி செல்சியஸிற்கு கீழ் குளிர்பதனத்தில் வைக்க வேண்டும். இது 2 முதல் 3 நாட்கள் வரை கெடாமல் இருக்கும்.',
+        'உரிமம்': 'வருடாந்திர விற்றுமுதல் 12 லட்சம் வரை பதிவுச் சான்றிதழும், 12 லட்சம் முதல் 20 கோடி வரை மாநில உரிமமும், அதற்கு மேல் மத்திய உரிமமும் தேவை.',
+        'லேபிள்': 'உணவு லேபிள்களில் தயாரிப்பாளர் முகவரி, காலாவதி தேதி, ஊட்டச்சத்து விவரங்கள், சைவ/அசைவ குறியீடு மற்றும் எஃப்.எஸ்.எஸ்.ஏ.ஐ எண் கட்டாயம் இருக்க வேண்டும்.',
+        'சுகாதாரம்': 'சமையலறை மற்றும் பாத்திரங்களை தூய்மையாக வைக்கவும். குடிநீர் பரிசோதனை அறிக்கைகள் மற்றும் ஊழியர்களின் சுகாதார சான்றிதழ்கள் அவசியம்.',
+        'பாக்டீரியா': 'பாக்டீரியா தொற்று உள்ள உணவுப் பொருட்களை உடனடியாக தனிமைப்படுத்தி, கருவிகளை கிருமிநாசினி கொண்டு தூய்மைப்படுத்த வேண்டும்.',
+        'default': 'உங்கள் குரல் கட்டளை பெறப்பட்டது. எஃப்.எஸ்.எஸ்.ஏ.ஐ உணவு பாதுகாப்பு மற்றும் சுகாதார விதிமுறைகளை கவனமாக பின்பற்றுங்கள்.'
     }
 };
 
-const SpeechRecognition  = window.SpeechRecognition || window.webkitSpeechRecognition;
-const isSpeechSupported  = !!SpeechRecognition;
-if (!isSpeechSupported) speechSupportAlert.style.display = 'flex';
+function getClientVoiceFallback(query, lang = 'en-IN') {
+    const q = (query || '').toLowerCase();
+    const l = (lang || 'en-IN');
+    const dict = clientVoiceAnswers[l] || clientVoiceAnswers['en-IN'];
+    for (const key of Object.keys(dict)) {
+        if (key !== 'default' && q.includes(key)) {
+            return dict[key];
+        }
+    }
+    return dict['default'] || clientVoiceAnswers['en-IN']['default'];
+}
 
-function speakText(text, lang) {
-    if (!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
+/* --- Speech Synthesis (Text-to-Speech) Engine --- */
+let systemVoices = [];
+let keepAliveTimer = null;
+
+function loadVoices() {
+    if ('speechSynthesis' in window) {
+        systemVoices = window.speechSynthesis.getVoices();
+    }
+}
+loadVoices();
+if ('speechSynthesis' in window) {
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+function stopAgentSpeech() {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+    }
+    if (keepAliveTimer) {
+        clearInterval(keepAliveTimer);
+        keepAliveTimer = null;
+    }
+    if (tabVoiceAgent) {
+        tabVoiceAgent.classList.remove('agent-speaking');
+    }
+    if (soundwave) {
+        soundwave.classList.remove('wave-active');
+    }
+    if (btnStopSpeech) {
+        btnStopSpeech.disabled = true;
+    }
+    if (micStatusLabel && !isListening) {
+        micStatusLabel.textContent = 'Click the microphone to speak, or tap any quick command below';
+    }
+}
+
+function speakText(text, lang = 'en-IN') {
+    if (!('speechSynthesis' in window) || !text) return;
+    stopAgentSpeech();
+
     const utt = new SpeechSynthesisUtterance(text);
     utt.lang = lang;
-    const voices = window.speechSynthesis.getVoices();
-    const voice = voices.find(v => v.lang.startsWith(lang.split('-')[0]) && v.lang.includes('IN')) || voices.find(v => v.lang.includes('IN'));
-    if (voice) utt.voice = voice;
-    utt.onstart = () => soundwave.classList.add('wave-active');
-    utt.onend   = () => soundwave.classList.remove('wave-active');
+
+    // Smart voice selection matching language and Indian accents
+    const prefix = lang.split('-')[0].toLowerCase();
+    const targetLang = lang.toLowerCase();
+    let bestVoice = systemVoices.find(v => v.lang.toLowerCase() === targetLang);
+    if (!bestVoice) bestVoice = systemVoices.find(v => v.lang.toLowerCase().startsWith(prefix));
+    if (!bestVoice && prefix === 'en') {
+        bestVoice = systemVoices.find(v => v.lang.toLowerCase().includes('in')) ||
+                    systemVoices.find(v => v.name.toLowerCase().includes('india'));
+    }
+    if (!bestVoice) bestVoice = systemVoices.find(v => v.default) || systemVoices[0];
+    if (bestVoice) utt.voice = bestVoice;
+
+    utt.rate = 1.0;
+    utt.pitch = 1.0;
+
+    utt.onstart = () => {
+        if (tabVoiceAgent) tabVoiceAgent.classList.add('agent-speaking');
+        if (soundwave) soundwave.classList.add('wave-active');
+        if (btnStopSpeech) btnStopSpeech.disabled = false;
+        if (micStatusLabel) micStatusLabel.textContent = 'AI Safety Assistant is speaking...';
+
+        // Chrome keep-alive workaround for utterances > 15s
+        keepAliveTimer = setInterval(() => {
+            if (!window.speechSynthesis.speaking) {
+                clearInterval(keepAliveTimer);
+                keepAliveTimer = null;
+            } else {
+                window.speechSynthesis.pause();
+                window.speechSynthesis.resume();
+            }
+        }, 8000);
+    };
+
+    utt.onend = () => {
+        stopAgentSpeech();
+    };
+
+    utt.onerror = () => {
+        stopAgentSpeech();
+    };
+
     window.speechSynthesis.speak(utt);
 }
 
-function appendSpeechBubble(sender, speaker, text) {
+/* --- Conversation Bubble Renderer --- */
+function appendVoiceBubble(sender, speaker, text, lang = 'en-IN') {
     const bubble = document.createElement('div');
     bubble.className = `speech-bubble ${sender}`;
-    bubble.innerHTML = `<span class="speaker-tag">${speaker}</span><p class="speech-text">${text}</p>`;
+
+    if (sender === 'assistant') {
+        bubble.innerHTML = `
+            <div class="speech-bubble-header">
+                <span class="speaker-tag">${speaker}</span>
+                <button class="speech-replay-btn" aria-label="Replay audio" title="Listen again">
+                    <i class="fa-solid fa-volume-high" aria-hidden="true"></i>
+                </button>
+            </div>
+            <p class="speech-text">${text}</p>
+        `;
+        const replayBtn = bubble.querySelector('.speech-replay-btn');
+        replayBtn.addEventListener('click', () => {
+            speakText(text, lang);
+        });
+    } else {
+        bubble.innerHTML = `
+            <div class="speech-bubble-header">
+                <span class="speaker-tag">${speaker}</span>
+            </div>
+            <p class="speech-text">${text}</p>
+        `;
+    }
+
     voiceConversation.appendChild(bubble);
     voiceConversation.scrollTop = voiceConversation.scrollHeight;
+    return bubble;
 }
 
-function triggerVoiceSimulation(utterance, lang) {
-    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-    appendSpeechBubble('user', 'QA Auditor', `"${utterance}"`);
-    soundwave.classList.add('wave-active');
-    micStatusLabel.textContent = 'Analyzing command...';
-    setTimeout(() => {
-        soundwave.classList.remove('wave-active');
-        const responses = voiceAnswers[lang] || voiceAnswers['en-IN'];
-        const reply = responses[utterance] || responses['default'];
-        appendSpeechBubble('assistant', 'AI Safety Assistant', reply);
-        micStatusLabel.textContent = 'Click the microphone and say a command';
+/* --- AI Voice Query Processor --- */
+async function handleVoiceQuery(query, lang = 'en-IN') {
+    if (!query || !query.trim()) return;
+    const cleanQuery = query.trim();
+
+    stopAgentSpeech();
+
+    // Show user utterance in conversation stream
+    appendVoiceBubble('user', 'QA Auditor', `"${cleanQuery}"`, lang);
+
+    // Reset live transcript readout
+    if (liveTranscriptBox) liveTranscriptBox.classList.add('hidden');
+    if (soundwave) soundwave.classList.add('wave-active');
+    if (micStatusLabel) micStatusLabel.textContent = 'Analyzing regulation and preparing voice answer...';
+
+    try {
+        const response = await fetch('/api/voice-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: cleanQuery, lang })
+        });
+
+        if (!response.ok) throw new Error('API server unavailable');
+        const data = await response.json();
+        const reply = data.reply || getClientVoiceFallback(cleanQuery, lang);
+
+        appendVoiceBubble('assistant', 'AI Safety Assistant', reply, lang);
         speakText(reply, lang);
-    }, 1200);
+
+    } catch (err) {
+        console.warn('Voice API fallback engaged:', err.message);
+        const reply = getClientVoiceFallback(cleanQuery, lang);
+        appendVoiceBubble('assistant', 'AI Safety Assistant', reply, lang);
+        speakText(reply, lang);
+    }
 }
 
+/* --- Speech Recognition (Microphone) Controller --- */
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const isSpeechSupported = !!SpeechRecognition;
 let recognition = null;
-if (isSpeechSupported) {
+let isListening = false;
+
+if (!isSpeechSupported) {
+    if (speechSupportAlert) speechSupportAlert.style.display = 'flex';
+} else {
     recognition = new SpeechRecognition();
-    recognition.continuous = false; recognition.interimResults = false;
-    recognition.onstart  = () => { document.getElementById('tab-voice-agent').classList.add('mic-listening'); soundwave.classList.add('wave-active'); micStatusLabel.textContent = 'Listening...'; };
-    recognition.onerror  = () => { soundwave.classList.remove('wave-active'); document.getElementById('tab-voice-agent').classList.remove('mic-listening'); micStatusLabel.textContent = 'Speech error. Please try again.'; };
-    recognition.onend    = () => document.getElementById('tab-voice-agent').classList.remove('mic-listening');
-    recognition.onresult = e => triggerVoiceSimulation(e.results[0][0].transcript, voiceLangSelect.value);
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+        isListening = true;
+        if (tabVoiceAgent) tabVoiceAgent.classList.add('mic-listening');
+        if (soundwave) soundwave.classList.add('wave-active');
+        if (btnMicTrigger) {
+            btnMicTrigger.setAttribute('aria-pressed', 'true');
+            btnMicTrigger.classList.add('pulse');
+        }
+        if (micStatusLabel) micStatusLabel.textContent = 'Listening... Speak now (click again or pause to submit)';
+        if (liveTranscriptBox) liveTranscriptBox.classList.remove('hidden');
+        if (liveTranscriptText) liveTranscriptText.textContent = 'Listening for speech...';
+    };
+
+    recognition.onresult = (event) => {
+        let interimText = '';
+        let finalText = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+                finalText += event.results[i][0].transcript;
+            } else {
+                interimText += event.results[i][0].transcript;
+            }
+        }
+
+        const displayText = finalText || interimText;
+        if (liveTranscriptText && displayText) {
+            liveTranscriptText.textContent = `"${displayText}"`;
+        }
+
+        if (finalText && finalText.trim()) {
+            const queryCaptured = finalText.trim();
+            isListening = false;
+            if (liveTranscriptBox) liveTranscriptBox.classList.add('hidden');
+            handleVoiceQuery(queryCaptured, voiceLangSelect.value);
+        }
+    };
+
+    recognition.onerror = (event) => {
+        isListening = false;
+        if (tabVoiceAgent) tabVoiceAgent.classList.remove('mic-listening');
+        if (soundwave) soundwave.classList.remove('wave-active');
+        if (btnMicTrigger) {
+            btnMicTrigger.setAttribute('aria-pressed', 'false');
+            btnMicTrigger.classList.remove('pulse');
+        }
+        if (liveTranscriptBox) liveTranscriptBox.classList.add('hidden');
+
+        if (event.error === 'no-speech') {
+            if (micStatusLabel) micStatusLabel.textContent = 'No voice detected. Click the microphone and try speaking again.';
+        } else if (event.error === 'not-allowed') {
+            if (micStatusLabel) micStatusLabel.textContent = 'Microphone permission blocked. Please enable microphone permissions in your browser.';
+            showToast({
+                title: 'Microphone Permission Needed',
+                message: 'Click the camera/mic icon in the browser address bar to allow microphone access.',
+                type: 'warning',
+                duration: 5000
+            });
+        } else if (event.error !== 'aborted') {
+            if (micStatusLabel) micStatusLabel.textContent = 'Click the microphone to speak, or tap any quick command below';
+        }
+    };
+
+    recognition.onend = () => {
+        isListening = false;
+        if (tabVoiceAgent) tabVoiceAgent.classList.remove('mic-listening');
+        if (btnMicTrigger) {
+            btnMicTrigger.setAttribute('aria-pressed', 'false');
+            btnMicTrigger.classList.remove('pulse');
+        }
+        if (!tabVoiceAgent || !tabVoiceAgent.classList.contains('agent-speaking')) {
+            if (soundwave) soundwave.classList.remove('wave-active');
+        }
+    };
 }
 
+function startListening() {
+    if (!isSpeechSupported) {
+        showToast({
+            title: 'Microphone Not Supported',
+            message: 'Your browser does not support Speech Recognition. Use the Quick Commands or type your query in the console.',
+            type: 'info',
+            duration: 4000
+        });
+        return;
+    }
+    if (isListening) return;
+    stopAgentSpeech();
+
+    const selectedLang = voiceLangSelect.value || 'en-IN';
+    recognition.lang = selectedLang;
+
+    try {
+        recognition.start();
+    } catch (err) {
+        console.warn('Recognition start caught error:', err);
+    }
+}
+
+function stopListening() {
+    if (!isListening || !recognition) return;
+    try {
+        recognition.stop();
+    } catch (err) {
+        console.warn('Recognition stop caught error:', err);
+    }
+}
+
+// Microphone Button Toggle: Click to Speak / Click to Stop
 btnMicTrigger.addEventListener('click', () => {
-    const lang = voiceLangSelect.value;
-    if (isSpeechSupported) {
-        recognition.lang = lang; recognition.start();
+    if (isListening) {
+        stopListening();
     } else {
-        document.getElementById('tab-voice-agent').classList.add('mic-listening');
-        soundwave.classList.add('wave-active');
-        micStatusLabel.textContent = 'Listening (Simulation)...';
-        setTimeout(() => {
-            document.getElementById('tab-voice-agent').classList.remove('mic-listening');
-            soundwave.classList.remove('wave-active');
-            const phrases = { 'en-IN':['check restaurant hygiene rule','what are organic food logo regulations','recommend corrective action for bacteria'], 'hi-IN':['डेयरी उत्पाद शेल्फ लाइफ नियम क्या है','हलाल और शाकाहारी मार्क नियम क्या है'], 'ta-IN':['உணவு பாதுகாப்பு உரிமம் பெறுவது எப்படி','உணவு லேபிள் விதிகள் என்ன'] };
-            const list = phrases[lang] || phrases['en-IN'];
-            triggerVoiceSimulation(list[Math.floor(Math.random()*list.length)], lang);
-        }, 2500);
+        startListening();
     }
 });
 
-quickVoiceChips.forEach(chip => chip.addEventListener('click', () => {
-    voiceLangSelect.value = chip.getAttribute('data-lang');
-    triggerVoiceSimulation(chip.getAttribute('data-utterance'), chip.getAttribute('data-lang'));
-}));
+// Stop audio button
+if (btnStopSpeech) {
+    btnStopSpeech.addEventListener('click', () => {
+        stopAgentSpeech();
+        showToast({ title: 'Audio Stopped', message: 'Agent voice output silenced.', type: 'info', duration: 1800 });
+    });
+}
 
-if ('speechSynthesis' in window) window.speechSynthesis.getVoices();
+// Clear conversation stream
+if (btnClearVoice) {
+    btnClearVoice.addEventListener('click', () => {
+        stopAgentSpeech();
+        voiceConversation.innerHTML = `
+            <div class="speech-bubble assistant">
+                <div class="speech-bubble-header">
+                    <span class="speaker-tag">AI Safety Assistant</span>
+                    <button class="speech-replay-btn" aria-label="Replay audio" title="Replay audio response"><i class="fa-solid fa-volume-high" aria-hidden="true"></i></button>
+                </div>
+                <p class="speech-text" id="voice-intro-text">Hello! SafeFood Voice Agent is ready. Select your language, click the microphone, or type a question. For example: "Verify shelf life for milk", "Check restaurant hygiene rules", or "What license do I need?"</p>
+            </div>
+        `;
+        const initialReplayBtn = voiceConversation.querySelector('.speech-replay-btn');
+        if (initialReplayBtn) {
+            initialReplayBtn.addEventListener('click', () => {
+                const intro = document.getElementById('voice-intro-text');
+                if (intro) speakText(intro.textContent, voiceLangSelect.value);
+            });
+        }
+        showToast({ title: 'Conversation Cleared', message: 'Voice audit stream reset.', type: 'info', duration: 1800 });
+    });
+}
+
+// Quick voice prompt chips
+quickVoiceChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+        const lang = chip.getAttribute('data-lang') || 'en-IN';
+        const utterance = chip.getAttribute('data-utterance');
+        voiceLangSelect.value = lang;
+        handleVoiceQuery(utterance, lang);
+    });
+});
+
+// Inline typed question form
+if (voiceQuickInputForm) {
+    voiceQuickInputForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const text = (voiceTextInput.value || '').trim();
+        if (!text) return;
+        voiceTextInput.value = '';
+        handleVoiceQuery(text, voiceLangSelect.value);
+    });
+}
+
+// Update voice language selector listener
+voiceLangSelect.addEventListener('change', () => {
+    stopAgentSpeech();
+    const langNames = { 'en-IN': 'English', 'hi-IN': 'Hindi', 'ta-IN': 'Tamil' };
+    const name = langNames[voiceLangSelect.value] || 'Selected Language';
+    showToast({ title: `Auditing Language: ${name}`, message: `Speech recognition and voice responses set to ${name}.`, type: 'info', duration: 2500 });
+});
+
+// Initialize initial replay button on default intro message
+const defaultReplayBtn = document.querySelector('.speech-replay-btn');
+if (defaultReplayBtn) {
+    defaultReplayBtn.addEventListener('click', () => {
+        const intro = document.getElementById('voice-intro-text');
+        if (intro) speakText(intro.textContent, voiceLangSelect.value);
+    });
+}
 
 }); // end DOMContentLoaded
