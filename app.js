@@ -963,7 +963,9 @@ let keepAliveTimer = null;
 
 function loadVoices() {
     if ('speechSynthesis' in window) {
-        systemVoices = window.speechSynthesis.getVoices();
+        try {
+            systemVoices = window.speechSynthesis.getVoices();
+        } catch (e) {}
     }
 }
 loadVoices();
@@ -971,9 +973,29 @@ if ('speechSynthesis' in window) {
     window.speechSynthesis.onvoiceschanged = loadVoices;
 }
 
+// Global mobile audio unlock: primes speech synthesis on user interaction
+function primeSpeechEngine() {
+    if ('speechSynthesis' in window) {
+        try {
+            window.speechSynthesis.resume();
+            // Tiny inaudible utterance primes the mobile Safari / Android audio context
+            const primer = new SpeechSynthesisUtterance(' ');
+            primer.volume = 0.001;
+            primer.rate = 10;
+            window.speechSynthesis.speak(primer);
+        } catch (e) {}
+    }
+}
+
+// Unlock audio on first touch anywhere on page
+document.addEventListener('touchstart', function unlockTouch() {
+    primeSpeechEngine();
+    document.removeEventListener('touchstart', unlockTouch);
+}, { passive: true, once: true });
+
 function stopAgentSpeech() {
     if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
+        try { window.speechSynthesis.cancel(); } catch (e) {}
     }
     if (keepAliveTimer) {
         clearInterval(keepAliveTimer);
@@ -997,20 +1019,32 @@ function speakText(text, lang = 'en-IN') {
     if (!('speechSynthesis' in window) || !text) return;
     stopAgentSpeech();
 
+    try {
+        window.speechSynthesis.resume();
+    } catch (e) {}
+
     const utt = new SpeechSynthesisUtterance(text);
     utt.lang = lang;
 
-    // Smart voice selection matching language and Indian accents
-    const prefix = lang.split('-')[0].toLowerCase();
-    const targetLang = lang.toLowerCase();
-    let bestVoice = systemVoices.find(v => v.lang.toLowerCase() === targetLang);
-    if (!bestVoice) bestVoice = systemVoices.find(v => v.lang.toLowerCase().startsWith(prefix));
-    if (!bestVoice && prefix === 'en') {
-        bestVoice = systemVoices.find(v => v.lang.toLowerCase().includes('in')) ||
-                    systemVoices.find(v => v.name.toLowerCase().includes('india'));
+    // Refresh voices if list was empty on initial page load
+    if (!systemVoices || systemVoices.length === 0) {
+        loadVoices();
     }
-    if (!bestVoice) bestVoice = systemVoices.find(v => v.default) || systemVoices[0];
-    if (bestVoice) utt.voice = bestVoice;
+
+    if (systemVoices && systemVoices.length > 0) {
+        const prefix = (lang || 'en-IN').split('-')[0].toLowerCase();
+        const targetLang = (lang || 'en-IN').toLowerCase();
+        let bestVoice = systemVoices.find(v => v.lang && v.lang.toLowerCase() === targetLang);
+        if (!bestVoice) bestVoice = systemVoices.find(v => v.lang && v.lang.toLowerCase().startsWith(prefix));
+        if (!bestVoice && prefix === 'en') {
+            bestVoice = systemVoices.find(v => v.lang && v.lang.toLowerCase().includes('in')) ||
+                        systemVoices.find(v => v.name && v.name.toLowerCase().includes('india'));
+        }
+        // Only assign if matching the target language prefix to avoid foreign voice distortion
+        if (bestVoice && bestVoice.lang && bestVoice.lang.toLowerCase().startsWith(prefix)) {
+            utt.voice = bestVoice;
+        }
+    }
 
     utt.rate = 1.0;
     utt.pitch = 1.0;
@@ -1021,27 +1055,39 @@ function speakText(text, lang = 'en-IN') {
         if (btnStopSpeech) btnStopSpeech.disabled = false;
         if (micStatusLabel) micStatusLabel.textContent = 'AI Safety Assistant is speaking...';
 
-        // Chrome keep-alive workaround for utterances > 15s
+        // Chrome & Mobile Safari keep-alive workaround
+        if (keepAliveTimer) clearInterval(keepAliveTimer);
         keepAliveTimer = setInterval(() => {
             if (!window.speechSynthesis.speaking) {
                 clearInterval(keepAliveTimer);
                 keepAliveTimer = null;
             } else {
-                window.speechSynthesis.pause();
-                window.speechSynthesis.resume();
+                try {
+                    window.speechSynthesis.pause();
+                    window.speechSynthesis.resume();
+                } catch (e) {}
             }
-        }, 8000);
+        }, 6000);
     };
 
     utt.onend = () => {
         stopAgentSpeech();
     };
 
-    utt.onerror = () => {
+    utt.onerror = (err) => {
+        console.warn('Speech synthesis error:', err);
         stopAgentSpeech();
     };
 
-    window.speechSynthesis.speak(utt);
+    try {
+        window.speechSynthesis.speak(utt);
+        if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+        }
+    } catch (e) {
+        console.warn('Speech synthesis speak exception:', e);
+        stopAgentSpeech();
+    }
 }
 
 /* --- Conversation Bubble Renderer --- */
@@ -1053,14 +1099,17 @@ function appendVoiceBubble(sender, speaker, text, lang = 'en-IN') {
         bubble.innerHTML = `
             <div class="speech-bubble-header">
                 <span class="speaker-tag">${speaker}</span>
-                <button class="speech-replay-btn" aria-label="Replay audio" title="Listen again">
+                <button class="speech-replay-btn" aria-label="Play audio response" title="Listen again">
                     <i class="fa-solid fa-volume-high" aria-hidden="true"></i>
+                    <span class="replay-label">Play Audio</span>
                 </button>
             </div>
             <p class="speech-text">${text}</p>
         `;
         const replayBtn = bubble.querySelector('.speech-replay-btn');
-        replayBtn.addEventListener('click', () => {
+        replayBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            primeSpeechEngine();
             speakText(text, lang);
         });
     } else {
@@ -1083,6 +1132,7 @@ async function handleVoiceQuery(query, lang = 'en-IN') {
     const cleanQuery = query.trim();
 
     stopAgentSpeech();
+    primeSpeechEngine();
 
     // Show user utterance in conversation stream
     appendVoiceBubble('user', 'QA Auditor', `"${cleanQuery}"`, lang);
@@ -1091,6 +1141,8 @@ async function handleVoiceQuery(query, lang = 'en-IN') {
     if (liveTranscriptBox) liveTranscriptBox.classList.add('hidden');
     if (soundwave) soundwave.classList.add('wave-active');
     if (micStatusLabel) micStatusLabel.textContent = 'Analyzing regulation and preparing voice answer...';
+
+    const fallbackReply = getClientVoiceFallback(cleanQuery, lang);
 
     try {
         const response = await fetch('/api/voice-chat', {
@@ -1101,16 +1153,15 @@ async function handleVoiceQuery(query, lang = 'en-IN') {
 
         if (!response.ok) throw new Error('API server unavailable');
         const data = await response.json();
-        const reply = data.reply || getClientVoiceFallback(cleanQuery, lang);
+        const reply = data.reply || fallbackReply;
 
         appendVoiceBubble('assistant', 'AI Safety Assistant', reply, lang);
         speakText(reply, lang);
 
     } catch (err) {
         console.warn('Voice API fallback engaged:', err.message);
-        const reply = getClientVoiceFallback(cleanQuery, lang);
-        appendVoiceBubble('assistant', 'AI Safety Assistant', reply, lang);
-        speakText(reply, lang);
+        appendVoiceBubble('assistant', 'AI Safety Assistant', fallbackReply, lang);
+        speakText(fallbackReply, lang);
     }
 }
 
@@ -1119,101 +1170,136 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 const isSpeechSupported = !!SpeechRecognition;
 let recognition = null;
 let isListening = false;
+let lastCapturedTranscript = '';
+let querySubmitted = false;
 
 if (!isSpeechSupported) {
     if (speechSupportAlert) speechSupportAlert.style.display = 'flex';
 } else {
-    recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
+    try {
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
 
-    recognition.onstart = () => {
-        isListening = true;
-        if (tabVoiceAgent) tabVoiceAgent.classList.add('mic-listening');
-        if (soundwave) soundwave.classList.add('wave-active');
-        if (btnMicTrigger) {
-            btnMicTrigger.setAttribute('aria-pressed', 'true');
-            btnMicTrigger.classList.add('pulse');
-        }
-        if (micStatusLabel) micStatusLabel.textContent = 'Listening... Speak now (click again or pause to submit)';
-        if (liveTranscriptBox) liveTranscriptBox.classList.remove('hidden');
-        if (liveTranscriptText) liveTranscriptText.textContent = 'Listening for speech...';
-    };
-
-    recognition.onresult = (event) => {
-        let interimText = '';
-        let finalText = '';
-
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-                finalText += event.results[i][0].transcript;
-            } else {
-                interimText += event.results[i][0].transcript;
+        recognition.onstart = () => {
+            isListening = true;
+            querySubmitted = false;
+            lastCapturedTranscript = '';
+            if (tabVoiceAgent) tabVoiceAgent.classList.add('mic-listening');
+            if (soundwave) soundwave.classList.add('wave-active');
+            if (btnMicTrigger) {
+                btnMicTrigger.setAttribute('aria-pressed', 'true');
+                btnMicTrigger.classList.add('pulse');
             }
-        }
+            if (micStatusLabel) micStatusLabel.textContent = 'Listening... Speak now (tap mic again or pause to submit)';
+            if (liveTranscriptBox) liveTranscriptBox.classList.remove('hidden');
+            if (liveTranscriptText) liveTranscriptText.textContent = 'Listening for speech...';
+        };
 
-        const displayText = finalText || interimText;
-        if (liveTranscriptText && displayText) {
-            liveTranscriptText.textContent = `"${displayText}"`;
-        }
+        recognition.onresult = (event) => {
+            let interimText = '';
+            let finalText = '';
 
-        if (finalText && finalText.trim()) {
-            const queryCaptured = finalText.trim();
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalText += event.results[i][0].transcript;
+                } else {
+                    interimText += event.results[i][0].transcript;
+                }
+            }
+
+            const displayText = (finalText || interimText).trim();
+            if (displayText) {
+                lastCapturedTranscript = displayText;
+                if (liveTranscriptText) liveTranscriptText.textContent = `"${displayText}"`;
+            }
+
+            // If browser marks result as final, submit immediately
+            if (finalText && finalText.trim() && !querySubmitted) {
+                querySubmitted = true;
+                isListening = false;
+                if (liveTranscriptBox) liveTranscriptBox.classList.add('hidden');
+                handleVoiceQuery(finalText.trim(), voiceLangSelect.value);
+                try { recognition.stop(); } catch (e) {}
+            }
+        };
+
+        recognition.onerror = (event) => {
             isListening = false;
-            if (liveTranscriptBox) liveTranscriptBox.classList.add('hidden');
-            handleVoiceQuery(queryCaptured, voiceLangSelect.value);
-        }
-    };
-
-    recognition.onerror = (event) => {
-        isListening = false;
-        if (tabVoiceAgent) tabVoiceAgent.classList.remove('mic-listening');
-        if (soundwave) soundwave.classList.remove('wave-active');
-        if (btnMicTrigger) {
-            btnMicTrigger.setAttribute('aria-pressed', 'false');
-            btnMicTrigger.classList.remove('pulse');
-        }
-        if (liveTranscriptBox) liveTranscriptBox.classList.add('hidden');
-
-        if (event.error === 'no-speech') {
-            if (micStatusLabel) micStatusLabel.textContent = 'No voice detected. Click the microphone and try speaking again.';
-        } else if (event.error === 'not-allowed') {
-            if (micStatusLabel) micStatusLabel.textContent = 'Microphone permission blocked. Please enable microphone permissions in your browser.';
-            showToast({
-                title: 'Microphone Permission Needed',
-                message: 'Click the camera/mic icon in the browser address bar to allow microphone access.',
-                type: 'warning',
-                duration: 5000
-            });
-        } else if (event.error !== 'aborted') {
-            if (micStatusLabel) micStatusLabel.textContent = 'Click the microphone to speak, or tap any quick command below';
-        }
-    };
-
-    recognition.onend = () => {
-        isListening = false;
-        if (tabVoiceAgent) tabVoiceAgent.classList.remove('mic-listening');
-        if (btnMicTrigger) {
-            btnMicTrigger.setAttribute('aria-pressed', 'false');
-            btnMicTrigger.classList.remove('pulse');
-        }
-        if (!tabVoiceAgent || !tabVoiceAgent.classList.contains('agent-speaking')) {
+            if (tabVoiceAgent) tabVoiceAgent.classList.remove('mic-listening');
             if (soundwave) soundwave.classList.remove('wave-active');
-        }
-    };
+            if (btnMicTrigger) {
+                btnMicTrigger.setAttribute('aria-pressed', 'false');
+                btnMicTrigger.classList.remove('pulse');
+            }
+            if (liveTranscriptBox) liveTranscriptBox.classList.add('hidden');
+
+            if (event.error === 'no-speech') {
+                if (micStatusLabel) micStatusLabel.textContent = 'No voice detected. Tap the microphone and try speaking again.';
+            } else if (event.error === 'not-allowed') {
+                if (micStatusLabel) micStatusLabel.textContent = 'Microphone permission blocked. Please allow mic in your browser settings.';
+                showToast({
+                    title: 'Microphone Permission Needed',
+                    message: 'Please allow microphone access in your mobile browser settings to speak.',
+                    type: 'warning',
+                    duration: 5000
+                });
+            } else if (event.error !== 'aborted') {
+                if (micStatusLabel) micStatusLabel.textContent = 'Tap the microphone to speak, or tap any quick question below';
+            }
+        };
+
+        recognition.onend = () => {
+            isListening = false;
+            if (tabVoiceAgent) tabVoiceAgent.classList.remove('mic-listening');
+            if (btnMicTrigger) {
+                btnMicTrigger.setAttribute('aria-pressed', 'false');
+                btnMicTrigger.classList.remove('pulse');
+            }
+            if (liveTranscriptBox) liveTranscriptBox.classList.add('hidden');
+
+            // CRITICAL FOR MOBILE: If recognition ended or was stopped by user tap
+            // without the mobile browser setting isFinal = true, submit whatever was captured!
+            if (!querySubmitted && lastCapturedTranscript && lastCapturedTranscript.trim()) {
+                querySubmitted = true;
+                const toSubmit = lastCapturedTranscript.trim();
+                lastCapturedTranscript = '';
+                handleVoiceQuery(toSubmit, voiceLangSelect.value);
+            }
+
+            if (!tabVoiceAgent || !tabVoiceAgent.classList.contains('agent-speaking')) {
+                if (soundwave) soundwave.classList.remove('wave-active');
+            }
+        };
+    } catch (initErr) {
+        console.warn('SpeechRecognition initialization error:', initErr);
+    }
 }
 
 function startListening() {
-    if (!isSpeechSupported) {
+    primeSpeechEngine();
+
+    if (!isSpeechSupported || !recognition) {
+        // Mobile fallback: focus the inline text input and open mobile keyboard mic!
+        if (voiceTextInput) {
+            voiceTextInput.focus();
+            try {
+                voiceTextInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } catch (e) {}
+        }
         showToast({
-            title: 'Microphone Not Supported',
-            message: 'Your browser does not support Speech Recognition. Use the Quick Commands or type your query in the console.',
+            title: 'Mobile Dictation Ready',
+            message: 'Tap the microphone icon on your phone keyboard to dictate, or select a question below.',
             type: 'info',
-            duration: 4000
+            duration: 5000
         });
+        if (micStatusLabel) {
+            micStatusLabel.textContent = 'Tap phone keyboard microphone to dictate, or pick a question below';
+        }
         return;
     }
+
     if (isListening) return;
     stopAgentSpeech();
 
@@ -1236,8 +1322,10 @@ function stopListening() {
     }
 }
 
-// Microphone Button Toggle: Click to Speak / Click to Stop
-btnMicTrigger.addEventListener('click', () => {
+// Microphone Button Toggle: Click/Touch to Speak / Click/Touch to Stop
+btnMicTrigger.addEventListener('click', (e) => {
+    e.preventDefault();
+    primeSpeechEngine();
     if (isListening) {
         stopListening();
     } else {
@@ -1247,7 +1335,8 @@ btnMicTrigger.addEventListener('click', () => {
 
 // Stop audio button
 if (btnStopSpeech) {
-    btnStopSpeech.addEventListener('click', () => {
+    btnStopSpeech.addEventListener('click', (e) => {
+        e.preventDefault();
         stopAgentSpeech();
         showToast({ title: 'Audio Stopped', message: 'Agent voice output silenced.', type: 'info', duration: 1800 });
     });
@@ -1255,20 +1344,23 @@ if (btnStopSpeech) {
 
 // Clear conversation stream
 if (btnClearVoice) {
-    btnClearVoice.addEventListener('click', () => {
+    btnClearVoice.addEventListener('click', (e) => {
+        e.preventDefault();
         stopAgentSpeech();
         voiceConversation.innerHTML = `
             <div class="speech-bubble assistant">
                 <div class="speech-bubble-header">
                     <span class="speaker-tag">AI Safety Assistant</span>
-                    <button class="speech-replay-btn" aria-label="Replay audio" title="Replay audio response"><i class="fa-solid fa-volume-high" aria-hidden="true"></i></button>
+                    <button class="speech-replay-btn" aria-label="Play audio" title="Listen again"><i class="fa-solid fa-volume-high" aria-hidden="true"></i> <span class="replay-label">Play Audio</span></button>
                 </div>
                 <p class="speech-text" id="voice-intro-text">Hello! SafeFood Voice Agent is ready. Select your language, click the microphone, or type a question. For example: "Verify shelf life for milk", "Check restaurant hygiene rules", or "What license do I need?"</p>
             </div>
         `;
         const initialReplayBtn = voiceConversation.querySelector('.speech-replay-btn');
         if (initialReplayBtn) {
-            initialReplayBtn.addEventListener('click', () => {
+            initialReplayBtn.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                primeSpeechEngine();
                 const intro = document.getElementById('voice-intro-text');
                 if (intro) speakText(intro.textContent, voiceLangSelect.value);
             });
@@ -1279,7 +1371,9 @@ if (btnClearVoice) {
 
 // Quick voice prompt chips
 quickVoiceChips.forEach(chip => {
-    chip.addEventListener('click', () => {
+    chip.addEventListener('click', (e) => {
+        e.preventDefault();
+        primeSpeechEngine();
         const lang = chip.getAttribute('data-lang') || 'en-IN';
         const utterance = chip.getAttribute('data-utterance');
         voiceLangSelect.value = lang;
@@ -1291,6 +1385,7 @@ quickVoiceChips.forEach(chip => {
 if (voiceQuickInputForm) {
     voiceQuickInputForm.addEventListener('submit', (e) => {
         e.preventDefault();
+        primeSpeechEngine();
         const text = (voiceTextInput.value || '').trim();
         if (!text) return;
         voiceTextInput.value = '';
@@ -1301,6 +1396,7 @@ if (voiceQuickInputForm) {
 // Update voice language selector listener
 voiceLangSelect.addEventListener('change', () => {
     stopAgentSpeech();
+    primeSpeechEngine();
     const langNames = { 'en-IN': 'English', 'hi-IN': 'Hindi', 'ta-IN': 'Tamil' };
     const name = langNames[voiceLangSelect.value] || 'Selected Language';
     showToast({ title: `Auditing Language: ${name}`, message: `Speech recognition and voice responses set to ${name}.`, type: 'info', duration: 2500 });
@@ -1309,7 +1405,9 @@ voiceLangSelect.addEventListener('change', () => {
 // Initialize initial replay button on default intro message
 const defaultReplayBtn = document.querySelector('.speech-replay-btn');
 if (defaultReplayBtn) {
-    defaultReplayBtn.addEventListener('click', () => {
+    defaultReplayBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        primeSpeechEngine();
         const intro = document.getElementById('voice-intro-text');
         if (intro) speakText(intro.textContent, voiceLangSelect.value);
     });
