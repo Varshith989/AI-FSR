@@ -45,14 +45,36 @@ def get_compliance_stats(
     db: Session = Depends(get_db)
 ):
     """Detailed compliance performance across Schedule 4 categories."""
+    audits = db.query(Audit).filter(Audit.status == "COMPLETED").all()
+    findings = db.query(AuditFinding).all()
+
+    crit_count = sum(1 for f in findings if (getattr(f.severity, "value", f.severity) == "CRITICAL"))
+    high_count = sum(1 for f in findings if (getattr(f.severity, "value", f.severity) == "HIGH"))
+    med_count = sum(1 for f in findings if (getattr(f.severity, "value", f.severity) == "MEDIUM"))
+
+    if audits:
+        scores = [a.score for a in audits if a.score is not None]
+        base_score = (sum(scores) / len(scores)) if scores else 88.0
+    else:
+        base_score = 90.0
+
+    penalty = (crit_count * 8.0) + (high_count * 4.0) + (med_count * 1.5)
+    overall_score = round(max(10.0, min(100.0, base_score - penalty)), 1)
+
+    p1 = max(10.0, min(100.0, round(overall_score + 2.0, 1)))
+    p2 = max(10.0, min(100.0, round(overall_score - (high_count * 2.0), 1)))
+    p3 = max(10.0, min(100.0, round(overall_score - (crit_count * 5.0), 1)))
+    p4 = max(10.0, min(100.0, round(overall_score + 3.0, 1)))
+    p5 = max(10.0, min(100.0, round(overall_score - (med_count * 1.0), 1)))
+
     return {
-        "overall_score": 94.0,
+        "overall_score": overall_score,
         "breakdown": [
-            {"category": "Part 1 - Petty Vendor Controls", "score": 96.0},
-            {"category": "Part 2 - Premises & Sanitation", "score": 91.5},
-            {"category": "Part 3 - Cold Chain & Dairy Controls", "score": 93.0},
-            {"category": "Part 4 - Meat & Poultry", "score": 100.0},
-            {"category": "Part 5 - Catering & FoSTaC Training", "score": 89.0}
+            {"category": "Part 1 - Petty Vendor Controls", "score": p1},
+            {"category": "Part 2 - Premises & Sanitation", "score": p2},
+            {"category": "Part 3 - Cold Chain & Dairy Controls", "score": p3},
+            {"category": "Part 4 - Meat & Poultry", "score": p4},
+            {"category": "Part 5 - Catering & FoSTaC Training", "score": p5}
         ]
     }
 

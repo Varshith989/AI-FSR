@@ -8,6 +8,7 @@ from backend.database import get_db
 from backend.models import Batch, RecallPrediction, RecallEvent, User, UserRole
 from backend.auth.dependencies import get_current_user, require_roles
 from backend.recall.ml_engine import RecallPredictionEngine
+from backend.notifications.dispatcher import emit_notification, NotificationEvent
 
 router = APIRouter(prefix="/recall", tags=["Recall Risk Intelligence"])
 engine = RecallPredictionEngine()
@@ -84,6 +85,18 @@ def predict_recall_risk(
         complaints_count=payload.complaints_count,
         inspection_findings_count=payload.inspection_findings_count
     )
+
+    risk_level = result.get("risk_level", "LOW") if isinstance(result, dict) else getattr(result, "risk_level", "LOW")
+    risk_prob = result.get("risk_probability", 0.0) if isinstance(result, dict) else getattr(result, "risk_probability", 0.0)
+
+    if risk_level in ["HIGH", "CRITICAL"] or risk_prob >= 0.5:
+        emit_notification(
+            event=NotificationEvent.RECALL_RISK_HIGH,
+            message=f"Elevated recall risk detected for batch {batch.batch_number}: {risk_level} ({risk_prob * 100:.1f}%)",
+            recipient=current_user.email,
+            payload={"batch_id": str(batch.id), "risk_probability": risk_prob, "risk_level": risk_level}
+        )
+
     return result
 
 
@@ -158,6 +171,14 @@ def initiate_recall_event(
     batch.status = "RECALLED"
     db.commit()
     db.refresh(event)
+
+    emit_notification(
+        event=NotificationEvent.RECALL_RISK_HIGH,
+        message=f"Official recall event initiated for batch {batch.batch_number}: {payload.reason}",
+        recipient=current_user.email,
+        payload={"batch_id": str(batch.id), "event_id": str(event.id), "severity": payload.severity}
+    )
+
     return event
 
 

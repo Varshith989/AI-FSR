@@ -100,13 +100,30 @@ def get_supplier_risk(
     if not supplier:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier not found")
 
+    batches = db.query(Batch).filter(Batch.supplier_id == supplier_id).all()
+    total_batches = len(batches)
+    quarantined = sum(1 for b in batches if (getattr(b.status, "value", b.status) == "QUARANTINED"))
+    recalled = sum(1 for b in batches if (getattr(b.status, "value", b.status) == "RECALLED"))
+    avg_batch_risk = (sum(b.risk_score for b in batches) / total_batches) if total_batches > 0 else (supplier.risk_score or 0.1)
+
+    base_health = supplier.health_score if supplier.health_score is not None else 85.0
+    risk_factor = (supplier.risk_score or 0.1) * 30.0
+    batch_penalty = (quarantined * 15.0) + (recalled * 30.0)
+
+    compliance_score = max(10.0, min(100.0, round(base_health - (risk_factor * 0.4) - batch_penalty, 1)))
+    quality_score = max(10.0, min(100.0, round(100.0 - (avg_batch_risk * 50.0) - batch_penalty, 1)))
+    delivery_score = max(10.0, min(100.0, round(base_health * 0.95 - (quarantined * 5.0), 1)))
+    audit_score = max(10.0, min(100.0, round(base_health * 0.92 - (risk_factor * 0.3), 1)))
+    lab_score = max(10.0, min(100.0, round(100.0 - (avg_batch_risk * 45.0), 1)))
+    complaints_score = max(10.0, min(100.0, round(100.0 - (quarantined * 15.0) - (recalled * 25.0) - (risk_factor * 0.2), 1)))
+
     signals = {
-        "compliance": 95.0,
-        "quality": 92.0,
-        "delivery": 88.0,
-        "audit": 90.0,
-        "lab": 94.0,
-        "complaints": 98.0
+        "compliance": compliance_score,
+        "quality": quality_score,
+        "delivery": delivery_score,
+        "audit": audit_score,
+        "lab": lab_score,
+        "complaints": complaints_score
     }
     composite_health = (
         signals["compliance"] * 0.25 +

@@ -18,10 +18,24 @@ from backend.dashboard.router import router as dashboard_router
 from backend.voice.router import router as voice_router
 
 
+# Auto-initialize database tables with all registered models
+try:
+    import backend.models
+    from backend.database import engine, Base, SessionLocal
+    from data.seeders.seed_data import seed_database
+    Base.metadata.create_all(bind=engine)
+    _db = SessionLocal()
+    seed_database(_db)
+    _db.close()
+except Exception as exc:
+    pass
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Auto-initialize SQLite database tables and seed FSSAI regulations on startup
     try:
+        import backend.models
         from backend.database import engine, Base, SessionLocal
         from data.seeders.seed_data import seed_database
         Base.metadata.create_all(bind=engine)
@@ -53,6 +67,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from backend.utils.tenancy import reset_current_tenant_id
+
+@app.middleware("http")
+async def tenancy_cleanup_middleware(request: Request, call_next):
+    """Guarantees tenant ContextVar does not bleed across concurrent requests."""
+    reset_current_tenant_id()
+    try:
+        response = await call_next(request)
+        return response
+    finally:
+        reset_current_tenant_id()
+
 # API v1 Router Registration (§7)
 API_V1_PREFIX = "/api/v1"
 
@@ -68,6 +94,10 @@ app.include_router(batches_router, prefix=API_V1_PREFIX)
 app.include_router(recall_router, prefix=API_V1_PREFIX)
 app.include_router(dashboard_router, prefix=API_V1_PREFIX)
 app.include_router(voice_router, prefix=API_V1_PREFIX)
+
+# Legacy Frontend API Bridge (for app.js compatibility and audit suite)
+from backend.legacy_bridge import router as legacy_bridge_router
+app.include_router(legacy_bridge_router, prefix="/api")
 
 
 @app.get("/health")

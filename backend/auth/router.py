@@ -46,16 +46,21 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             mfa_required=True
         )
 
+    user_id = user.id
+    user_org_id = user.organization_id
+    user_name = user.name
+    user_email = user.email
+    role_str = user.role if isinstance(user.role, str) else user.role.value
+
     # Update last login timestamp
     user.last_login_at = datetime.now(timezone.utc)
     with TenantBypassScope():
         db.commit()
 
-    role_str = user.role if isinstance(user.role, str) else user.role.value
     token_claims = {
-        "sub": str(user.id),
-        "email": user.email,
-        "org": str(user.organization_id) if user.organization_id else None,
+        "sub": str(user_id),
+        "email": user_email,
+        "org": str(user_org_id) if user_org_id else None,
         "role": role_str
     }
     access_token = create_access_token(token_claims)
@@ -65,11 +70,11 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         access_token=access_token,
         refresh_token=refresh_token,
         token_type="bearer",
-        user_id=user.id,
-        organization_id=user.organization_id,
+        user_id=user_id,
+        organization_id=user_org_id,
         role=role_str,
-        name=user.name,
-        email=user.email,
+        name=user_name,
+        email=user_email,
         mfa_required=False
     )
 

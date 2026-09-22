@@ -63,6 +63,8 @@ def get_current_user(
         )
 
     # Set active tenant context for the duration of this request
+    if hasattr(db, "info"):
+        db.info["tenant_id"] = user.organization_id
     set_current_tenant_id(user.organization_id)
     return user
 

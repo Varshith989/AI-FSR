@@ -37,9 +37,11 @@ def set_current_tenant_id(tenant_id: Optional[uuid.UUID]):
 
 
 def reset_current_tenant_id():
-    global _fallback_tenant_id
+    global _fallback_tenant_id, _fallback_tenant_bypass
     _current_tenant_id.set(None)
     _fallback_tenant_id = None
+    _tenant_bypass.set(False)
+    _fallback_tenant_bypass = False
 
 
 class TenantScope:
@@ -69,9 +71,11 @@ class TenantBypassScope:
     """Context manager for system tasks (e.g. migration, super-admin aggregate jobs) to bypass tenant filter checks."""
     def __init__(self):
         self.token = None
+        self.prev_bypass = None
 
     def __enter__(self):
         global _fallback_tenant_bypass
+        self.prev_bypass = _fallback_tenant_bypass
         self.token = _tenant_bypass.set(True)
         _fallback_tenant_bypass = True
         return self
@@ -80,7 +84,7 @@ class TenantBypassScope:
         global _fallback_tenant_bypass
         if self.token:
             _tenant_bypass.reset(self.token)
-        _fallback_tenant_bypass = False
+        _fallback_tenant_bypass = self.prev_bypass
 
 
 def register_tenancy_guard(session_factory):
@@ -91,12 +95,13 @@ def register_tenancy_guard(session_factory):
     """
     @event.listens_for(session_factory, "do_orm_execute")
     def receive_do_orm_execute(execute_state):
-        if _tenant_bypass.get() or _fallback_tenant_bypass:
+        session_info = getattr(execute_state.session, "info", {})
+        if session_info.get("tenant_bypass", False) or _tenant_bypass.get() or _fallback_tenant_bypass:
             return
 
         # Check if the execution is a SELECT statement
         if execute_state.is_select:
-            tenant_id = get_current_tenant_id()
+            tenant_id = session_info.get("tenant_id") or get_current_tenant_id()
             statement = execute_state.statement
 
             # Inspect selected entities

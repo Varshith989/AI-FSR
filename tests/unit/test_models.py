@@ -8,22 +8,23 @@ from backend.models import (
     Document, DocumentAnalysis,
     Audit, AuditFinding, FindingSeverity, CAPAAction,
     RecallPrediction, RecallEvent,
-    AIModelVersion, AIPrediction, AIAuditLog
+    AIModelVersion, AIPrediction, AIAuditLog,
+    LabelValidation
 )
 from backend.utils.tenancy import TenantBypassScope, TenantScope
 
 
 def test_table_registration_count():
-    """Assert all 18 core tables are properly registered in SQLAlchemy metadata."""
+    """Assert all core tables are properly registered in SQLAlchemy metadata."""
     expected_tables = {
         "organizations", "users", "sites", "products", "suppliers", "batches",
         "regulatory_documents", "regulatory_clauses", "documents", "document_analysis",
         "audits", "audit_findings", "capa_actions", "recall_predictions", "recall_events",
-        "ai_model_versions", "ai_predictions", "ai_audit_logs"
+        "ai_model_versions", "ai_predictions", "ai_audit_logs", "label_validations"
     }
     actual_tables = set(Base.metadata.tables.keys())
     assert expected_tables.issubset(actual_tables), f"Missing tables: {expected_tables - actual_tables}"
-    assert len(actual_tables) == 18
+    assert len(actual_tables) == 19
 
 
 def test_user_roles_enum():

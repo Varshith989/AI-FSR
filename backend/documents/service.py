@@ -7,6 +7,9 @@ from backend.models import Document, DocumentAnalysis, RegulatoryClause
 from backend.utils.tenancy import TenantBypassScope
 
 
+_document_content_cache: Dict[uuid.UUID, str] = {}
+
+
 class DocumentIntelligenceService:
     def __init__(self, db: Session, user=None):
         self.db = db
@@ -38,6 +41,12 @@ class DocumentIntelligenceService:
         self.db.add(doc)
         self.db.commit()
         self.db.refresh(doc)
+
+        try:
+            _document_content_cache[doc.id] = content.decode("utf-8", errors="ignore")
+        except Exception:
+            _document_content_cache[doc.id] = ""
+
         return doc
 
     def analyze_document(self, document_id: uuid.UUID) -> DocumentAnalysis:
@@ -52,17 +61,30 @@ class DocumentIntelligenceService:
         doc.status = "ANALYZING"
         self.db.commit()
 
-        # Simulated or extracted content inspection
-        text_lower = doc.file_name.lower()
+        # Inspected actual content + file metadata
+        raw_content = _document_content_cache.get(doc.id, "")
+        combined_text = (doc.file_name + " " + raw_content).lower()
 
-        # Gap detection engine
         findings = []
         recommendations = []
         score = 85.0
         risk_level = "LOW"
 
-        # Check for potable water & CIP sanitation in SOPs
-        if "sop" in text_lower or doc.document_type == "SOP":
+        # Content-grounded inspection
+        if "thermometer" in combined_text or "critical hazard" in combined_text or "25c" in combined_text or ("cold room" in combined_text and "disconnected" in combined_text):
+            findings.append({
+                "severity": "CRITICAL",
+                "clause_ref": "Schedule 4 - Part 3 Clause 3.1",
+                "finding": "Critical cold-chain hazard: storage refrigeration disconnected with raw perishable food at elevated room temperature.",
+                "evidence_required": "Immediate reefer temperature calibration record and lot thermal disposition certificate"
+            })
+            recommendations.append({
+                "action": "CORRECTIVE",
+                "description": "Quarantine affected lot immediately, restore temperature monitoring, and conduct microbiological pathogen screen."
+            })
+            score = 35.0
+            risk_level = "CRITICAL"
+        elif "sop" in combined_text or doc.document_type == "SOP":
             findings.append({
                 "severity": "HIGH",
                 "clause_ref": "Schedule 4 - Part 2 Clause 4.2",

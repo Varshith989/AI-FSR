@@ -7,8 +7,18 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import Batch, Product, BatchStatus, User, UserRole
 from backend.auth.dependencies import get_current_user, require_roles
+from backend.notifications.dispatcher import emit_notification, NotificationEvent
 
 router = APIRouter(tags=["Batches & Products"])
+
+VALID_BATCH_TRANSITIONS = {
+    BatchStatus.HOLD: {BatchStatus.RELEASED, BatchStatus.QUARANTINED, BatchStatus.DESTROYED, BatchStatus.HOLD},
+    BatchStatus.RELEASED: {BatchStatus.QUARANTINED, BatchStatus.RECALLED, BatchStatus.HOLD, BatchStatus.RELEASED},
+    BatchStatus.QUARANTINED: {BatchStatus.RELEASED, BatchStatus.HOLD, BatchStatus.RECALLED, BatchStatus.DESTROYED, BatchStatus.QUARANTINED},
+    BatchStatus.RECALLED: {BatchStatus.DESTROYED, BatchStatus.QUARANTINED, BatchStatus.RECALLED},
+    BatchStatus.DESTROYED: {BatchStatus.DESTROYED},
+    BatchStatus.CLOSED: {BatchStatus.CLOSED},
+}
 
 
 class ProductCreate(BaseModel):
@@ -162,7 +172,26 @@ def update_batch_status(
     if not batch:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found")
 
-    batch.status = payload.status
+    current_status = BatchStatus(batch.status) if isinstance(batch.status, str) else batch.status
+    target_status = BatchStatus(payload.status) if isinstance(payload.status, str) else payload.status
+
+    allowed = VALID_BATCH_TRANSITIONS.get(current_status, set())
+    if target_status not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid batch status transition from {current_status.value} to {target_status.value}"
+        )
+
+    batch.status = target_status
     db.commit()
     db.refresh(batch)
+
+    if target_status == BatchStatus.QUARANTINED and current_status != BatchStatus.QUARANTINED:
+        emit_notification(
+            event=NotificationEvent.BATCH_QUARANTINED,
+            message=f"Batch {batch.batch_number} has been transitioned to QUARANTINED.",
+            recipient=current_user.email,
+            payload={"batch_id": str(batch.id), "batch_number": batch.batch_number}
+        )
+
     return batch

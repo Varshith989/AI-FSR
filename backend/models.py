@@ -12,6 +12,7 @@ from backend.suppliers.models import Supplier
 from backend.batches.models import BatchStatus, Product, Batch
 from backend.recall.models import RecallPrediction, RecallEvent
 from backend.logs.models import AIModelVersion, AIPrediction, AIAuditLog
+from backend.labels.models import LabelValidation
 
 __all__ = [
     "Base",
@@ -36,4 +37,5 @@ __all__ = [
     "AIModelVersion",
     "AIPrediction",
     "AIAuditLog",
+    "LabelValidation",
 ]

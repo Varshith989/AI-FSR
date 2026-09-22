@@ -494,14 +494,77 @@ auditModal.addEventListener('keydown', e => {
 
 btnDownloadPdf.addEventListener('click', () => {
     btnDownloadPdf.disabled = true;
-    btnDownloadPdf.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i> Compiling PDF...';
+    btnDownloadPdf.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i> Compiling Report...';
     setTimeout(() => {
+        const total = checklistItems.querySelectorAll('.checklist-item').length;
+        const checked = checklistItems.querySelectorAll('.checklist-item input:checked').length;
+        const pct = total ? Math.round((checked / total) * 100) : 0;
+        const bType = businessSelect ? businessSelect.value : 'Facility';
+
+        const reportHtml = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>SafeFood AI - FSSAI Audit Report</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; color: #1e293b; background: #fff; }
+        h1 { color: #0284c7; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; }
+        .meta { margin: 20px 0; padding: 16px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #0284c7; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-weight: bold; background: ${pct >= 80 ? '#dcfce7; color: #166534;' : pct >= 50 ? '#fef3c7; color: #92400e;' : '#fee2e2; color: #991b1b;'} }
+        table { width: 100%; border-collapse: collapse; margin-top: 24px; }
+        th, td { border: 1px solid #cbd5e1; padding: 10px 14px; text-align: left; }
+        th { background: #f1f5f9; }
+        .footer { margin-top: 40px; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+    </style>
+</head>
+<body>
+    <h1>SafeFood AI — Statutory Food Safety Audit Report</h1>
+    <div class="meta">
+        <p><strong>Facility Type:</strong> ${bType.toUpperCase()}</p>
+        <p><strong>Compliance Score:</strong> <span class="badge">${pct}% (${checked}/${total} Verified)</span></p>
+        <p><strong>Audit Date:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</p>
+        <p><strong>Governing Framework:</strong> FSSAI Food Safety and Standards (Licensing & Registration) Regulations Schedule 4</p>
+    </div>
+    <h2>Inspection Checklist Items</h2>
+    <table>
+        <thead>
+            <tr><th>Status</th><th>Inspection Item</th><th>FSSAI Statutory Clause</th></tr>
+        </thead>
+        <tbody>
+            ${Array.from(checklistItems.querySelectorAll('.checklist-item')).map(item => {
+                const isChecked = item.querySelector('input').checked;
+                const title = item.querySelector('.checklist-item-title').textContent;
+                const clause = item.querySelector('.checklist-item-clause').textContent;
+                return `<tr>
+                    <td><strong>${isChecked ? 'COMPLIANT' : 'NON-COMPLIANT'}</strong></td>
+                    <td>${title}</td>
+                    <td>${clause}</td>
+                </tr>`;
+            }).join('')}
+        </tbody>
+    </table>
+    <div class="footer">
+        Generated autonomously by SafeFood AI Enterprise Platform • Regulated by Food Safety and Standards Authority of India (FSSAI)
+    </div>
+</body>
+</html>`;
+
+        const blob = new Blob([reportHtml], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `SafeFood_FSSAI_Audit_Report_${bType}_${Date.now()}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
         btnDownloadPdf.disabled = false;
         btnDownloadPdf.innerHTML = '<i class="fa-solid fa-circle-check" aria-hidden="true"></i> Report Downloaded';
         closeModal();
-        showToast({ title: 'Report Downloaded', message: 'Compliance audit PDF has been saved to your device.', type: 'success', duration: 4000 });
+        showToast({ title: 'Report Downloaded', message: 'Comprehensive FSSAI audit report has been downloaded.', type: 'success', duration: 4000 });
         setTimeout(() => { btnDownloadPdf.innerHTML = '<i class="fa-solid fa-download" aria-hidden="true"></i> Download Audit Report PDF'; }, 1500);
-    }, 1500);
+    }, 600);
 });
 
 /* -------------------------------------------------------

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, s
 from pydantic import BaseModel
 from backend.models import User
 from backend.auth.dependencies import get_current_user
+from backend.labels.models import LabelValidation
 from backend.labels.service import LabelValidatorEngine, save_label, get_label
 
 router = APIRouter(prefix="/labels", tags=["Food Label Validator"])

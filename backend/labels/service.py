@@ -135,7 +135,72 @@ _label_store: Dict[str, Dict[str, Any]] = {}
 
 def save_label(label_id: str, data: Dict[str, Any]):
     _label_store[label_id] = data
+    try:
+        from backend.database import SessionLocal
+        from backend.labels.models import LabelValidation
+        from backend.utils.tenancy import TenantBypassScope
+
+        uid = uuid.UUID(label_id) if isinstance(label_id, str) else label_id
+        with TenantBypassScope():
+            db = SessionLocal()
+            record = db.query(LabelValidation).filter(LabelValidation.id == uid).first()
+            if not record:
+                record = LabelValidation(
+                    id=uid,
+                    file_name=data.get("file_name", "unknown_label"),
+                    raw_text=data.get("raw_text", ""),
+                    status=data.get("status", "UPLOADED"),
+                    extracted_data=data.get("extracted"),
+                    score=data.get("report", {}).get("score") if data.get("report") else None,
+                    overall_status=data.get("report", {}).get("overall_status") if data.get("report") else None,
+                    issues=data.get("report", {}).get("issues") if data.get("report") else None
+                )
+                db.add(record)
+            else:
+                record.status = data.get("status", record.status)
+                if data.get("extracted"):
+                    record.extracted_data = data["extracted"]
+                if data.get("report"):
+                    record.score = data["report"].get("score")
+                    record.overall_status = data["report"].get("overall_status")
+                    record.issues = data["report"].get("issues")
+            db.commit()
+            db.close()
+    except Exception as exc:
+        print(f"[SafeFood AI] Label persistence note: {exc}")
 
 
 def get_label(label_id: str) -> Optional[Dict[str, Any]]:
-    return _label_store.get(label_id)
+    if label_id in _label_store:
+        return _label_store[label_id]
+
+    try:
+        from backend.database import SessionLocal
+        from backend.labels.models import LabelValidation
+        from backend.utils.tenancy import TenantBypassScope
+
+        uid = uuid.UUID(label_id) if isinstance(label_id, str) else label_id
+        with TenantBypassScope():
+            db = SessionLocal()
+            record = db.query(LabelValidation).filter(LabelValidation.id == uid).first()
+            if record:
+                data = {
+                    "label_id": str(record.id),
+                    "file_name": record.file_name,
+                    "raw_text": record.raw_text,
+                    "status": record.status,
+                    "extracted": record.extracted_data,
+                    "report": {
+                        "overall_status": record.overall_status,
+                        "score": record.score,
+                        "issues": record.issues or []
+                    } if record.score is not None else None
+                }
+                _label_store[label_id] = data
+                db.close()
+                return data
+            db.close()
+    except Exception:
+        pass
+
+    return None
