@@ -12,9 +12,27 @@ from backend.audits.router import router as audits_router
 from backend.audits.capa_router import router as capa_router
 from backend.suppliers.router import router as suppliers_router
 from backend.batches.router import router as batches_router
+from contextlib import asynccontextmanager
 from backend.recall.router import router as recall_router
 from backend.dashboard.router import router as dashboard_router
 from backend.voice.router import router as voice_router
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Auto-initialize SQLite database tables and seed FSSAI regulations on startup
+    try:
+        from backend.database import engine, Base, SessionLocal
+        from data.seeders.seed_data import seed_database
+        Base.metadata.create_all(bind=engine)
+        db = SessionLocal()
+        seed_database(db)
+        db.close()
+        print("[SafeFood AI] Database tables and FSSAI seed data verified successfully.")
+    except Exception as exc:
+        print(f"[SafeFood AI] Database startup init note: {exc}")
+    yield
+
 
 app = FastAPI(
     title="SafeFood AI (AI-FSR) API",
@@ -22,7 +40,8 @@ app = FastAPI(
     description="Enterprise Food Safety Compliance, Audit, and Recall Risk Management Platform (FSSAI-regulated).",
     openapi_url="/api/v1/openapi.json",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # CORS Middleware
