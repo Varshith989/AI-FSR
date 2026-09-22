@@ -3,7 +3,11 @@ FROM python:3.12-slim
 WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    DATABASE_URL="sqlite:///./safefood.db" \
+    ENVIRONMENT="production" \
+    LLM_PROVIDER="mock" \
+    EMBEDDING_PROVIDER="mock"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
