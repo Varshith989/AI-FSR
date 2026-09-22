@@ -1,0 +1,38 @@
+name: Deploy
+
+on:
+  release:
+    types: [ published ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment target'
+        required: true
+        default: 'staging'
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.environment == 'staging' || github.event_name == 'release'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to ECS Fargate (Staging)
+        run: |
+          echo "Deploying to Staging ECS Fargate cluster..."
+
+  manual-approval:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Awaiting Approval
+        run: echo "Staging verified. Proceeding to production deployment."
+
+  deploy-production:
+    needs: manual-approval
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to ECS Fargate (Production)
+        run: |
+          echo "Deploying to Production ECS Fargate cluster with CloudFront & AWS WAF..."

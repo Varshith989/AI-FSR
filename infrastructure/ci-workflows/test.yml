@@ -1,0 +1,54 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, final-version ]
+  pull_request:
+    branches: [ main, final-version ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: safefood_user
+          POSTGRES_PASSWORD: safefood_pass_2026
+          POSTGRES_DB: safefood_test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run unit & tenant isolation tests
+        env:
+          DATABASE_URL: postgresql+psycopg://safefood_user:safefood_pass_2026@localhost:5432/safefood_test_db
+          JWT_SECRET_KEY: test_secret_key_ci_environment_only_12345
+        run: |
+          pytest tests/ -v
