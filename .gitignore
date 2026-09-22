@@ -21,7 +21,8 @@ desktop.ini
 *.sw?
 
 # Logs
-logs/
+/logs/
+!backend/logs/
 *.log
 
 # Uploads
