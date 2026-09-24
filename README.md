@@ -1,169 +1,153 @@
-# SafeFood AI (AI-FSR) 🛡️
-### Intelligent Food Safety Compliance & Predictive Recall Platform
+# SafeFood AI (AI-FSR)
 
-[![FSSAI Compliance](https://img.shields.io/badge/FSSAI-2026%20Ready-success?style=for-the-badge&logo=shield)](https://github.com/naveen-kumar-agraharam/AI-FSR)
-[![Vanilla JS](https://img.shields.io/badge/Stack-Vanilla%20JS%20%7C%20CSS3%20%7C%20HTML5-blue?style=for-the-badge)](https://github.com/naveen-kumar-agraharam/AI-FSR)
-[![Chart.js](https://img.shields.io/badge/Data%20Viz-Chart.js-orange?style=for-the-badge&logo=chartdotjs)](https://github.com/naveen-kumar-agraharam/AI-FSR)
-[![Voice AI](https://img.shields.io/badge/Speech%20AI-Web%20Speech%20API-purple?style=for-the-badge&logo=soundcharts)](https://github.com/naveen-kumar-agraharam/AI-FSR)
+> **Enterprise AI-Powered Food Safety Compliance, Audit, and Recall Risk Intelligence Platform**  
+> Tailored for the Indian market and regulated under the Food Safety and Standards Authority of India (**FSSAI**).
 
 ---
 
-## 📌 Overview
+## 1. Product Vision & Core Pillars
 
-**SafeFood AI (AI-FSR)** is an enterprise-grade food safety intelligence platform designed to automate regulatory compliance, evaluate standard operating procedures (SOPs), audit product labeling against national food safety authorities (such as FSSAI), and predict batch recall risks before contamination reaches consumers.
+SafeFood AI bridges statutory regulatory standards and factory shopfloor reality for food manufacturers, cloud kitchens, retail chains, and quality assurance teams across India.
 
-Featuring an interactive modern dashboard with real-time risk indicators, automated audit assistants, and multilingual voice capabilities, SafeFood AI streamlines end-to-end quality assurance for food processors, distributors, QA teams, and regulatory auditors.
-
----
-
-## ✨ Core Features & Modules
-
-### 1. 📊 Executive Overview & Compliance Health Index
-* **Enterprise Health Score**: Dynamic radial compliance rating tracking overall facility readiness.
-* **Live Status Feed**: Continuous sync monitoring for regulatory standards and supplier alerts.
-* **Notification Center**: Real-time alerts for contamination risks, critical vendor deviations, and SOP audit completions.
-
-### 2. ⚖️ FSSAI Regulatory Assistant
-* **AI Compliance Chatbot**: Real-time Q&A engine trained on FSSAI guidelines, licensing tiers, shelf-life norms, and packaging mandates.
-* **Instant Query Chips**: One-click quick prompts for dairy shelf-life, distributor licensing, allergen rules, and packaging criteria.
-* **Audit Checklist Generator**: Generates customized inspection checklists for specific facility types (dairy, confectionery, meat processing, etc.).
-
-### 3. 📄 Document Intelligence (SOP & HACCP Auditor)
-* **Automated SOP & HACCP Review**: Scans uploaded or pasted procedures against FSSAI critical control point (CCP) benchmarks.
-* **Gap Analysis**: Detects missing hygiene protocols, undocumented temperature logs, and pest control omissions.
-* **Remediation Recommendations**: Generates immediate corrective action steps to address compliance gaps.
-
-### 4. 🏷️ Food Label & Packaging Validator
-* **Nutritional & Ingredient Auditing**: Verifies macronutrient breakdowns, sodium, added sugars, and trans fats.
-* **Allergen Detection**: Flags undeclared allergens (gluten, peanuts, soy, dairy, sulfites) and enforces bolding/warning requirements.
-* **Mandatory Declarations Check**: Confirms Veg/Non-Veg logo compliance, batch numbers, expiry formats, and manufacturer details.
-
-### 5. ⚠️ Predictive Recall Dashboard
-* **Supplier Risk Scoring**: Machine-learning driven supplier assessment matrix highlighting high-risk raw material vendors.
-* **Interactive Data Visualizations**: Rich Chart.js analytics for historical contamination trends, pathogen risks (Salmonella, E. coli, Listeria), and risk distribution.
-* **Batch Traceability**: Pinpoints affected batches with automated quarantine workflow triggers.
-
-### 6. 🎙️ Multilingual Voice Agent
-* **Hands-Free Operation**: Voice-driven audit interface tailored for factory floors and lab environments.
-* **Multilingual Speech Support**: Real-time speech recognition and speech synthesis in **English**, **Hindi (हिंदी)**, and **Tamil (தமிழ்)**.
-* **Interactive Voice Commands**: Query compliance statuses, trigger label scans, or ask safety guidelines completely hands-free.
+- **Regulatory Intelligence**: FSSAI statutory RAG pipeline, versioned Gazette tracking, Schedule 4 hygiene standards, and precise clause citation.
+- **Document Intelligence**: Automated compliance analysis of SOPs, HACCP plans, laboratory reports, and pest control logs with gap detection.
+- **Audit & CAPA**: Full lifecycle digital inspections, photo evidence capture, severity classification, and root cause corrective actions.
+- **Food Risk Intelligence**: Machine-learning batch recall risk prediction with SHAP factor explainability and supplier scorecards.
+- **AI Food Safety Copilot**: Trilingual shopfloor voice & text assistant (English, Hindi, Tamil) with security confirmation gates for high-impact actions.
 
 ---
 
-## 🛠️ Technology Stack
+## 2. Technology Stack
 
-| Component | Technology | Description |
-| :--- | :--- | :--- |
-| **Frontend Core** | HTML5, Semantic Elements | Accessible and responsive UI layout |
-| **Styling** | Vanilla CSS3 | Custom design system, CSS variables, glassmorphism, responsive grid |
-| **Scripting & Logic**| Vanilla JavaScript (ES6+) | Tab routing, state management, simulated AI inference, DOM updates |
-| **Data Visualization**| [Chart.js](https://www.chartjs.org/) | Responsive charts for risk indices, supplier ratings, and recall metrics |
-| **Typography** | Google Fonts ([Outfit](https://fonts.google.com/specimen/Outfit) & [Inter](https://fonts.google.com/specimen/Inter)) | Clean enterprise typography |
-| **Iconography** | [FontAwesome 6](https://fontawesome.com/) | Comprehensive vector icons |
-| **Speech Engine** | Web Speech API (`webkitSpeechRecognition` & `SpeechSynthesis`) | Browser-native multilingual speech recognition and text-to-speech |
+| Layer | Technology |
+|---|---|
+| **Backend** | Python 3.12, FastAPI, SQLAlchemy 2.0, Alembic |
+| **Database** | PostgreSQL 16 with `pgvector` extension (UUID PKs, JSONB, row-level multi-tenancy) |
+| **Cache & Tasks** | Redis 7, In-process / Celery task queues |
+| **Storage** | MinIO (local S3-compatible) / AWS S3 |
+| **Search Engine** | OpenSearch 2 (hybrid semantic + BM25 keyword search) |
+| **Frontend** | React / Next.js, TypeScript, Tailwind CSS |
+| **Auth & RBAC** | JWT Bearer tokens (access + refresh), Deny-by-default policy engine, MFA |
+| **Security** | Query-level tenancy isolation guard, AES encryption at rest, TLS 1.2+ |
 
 ---
 
-## 📁 Repository Structure
+## 3. Repository Structure
 
-```plaintext
-AI-FSR/
-├── index.html      # Main application interface with modular tab views
-├── style.css       # Complete design system, dark glassmorphic styling, and animations
-├── app.js          # Core business logic, Chart.js integrations, voice agent, and datasets
-└── README.md       # Project documentation and guide
+```
+safefood-ai/
+├── backend/                  # Python + FastAPI modular monolith
+│   ├── auth/                 # Identity, JWT, MFA, RBAC policy engine
+│   ├── compliance/           # FSSAI regulatory knowledge & RAG engine
+│   ├── documents/            # SOP / HACCP document analysis pipeline
+│   ├── labels/               # Food label validator & OCR rule engine
+│   ├── audits/               # Inspection checklists, findings, & CAPA
+│   ├── suppliers/            # Supplier profiles & health scoring
+│   ├── batches/              # Production batches & lot traceability
+│   ├── recall/               # ML recall prediction & incident events
+│   ├── logs/                 # AI model versions, predictions, audit logs
+│   ├── utils/                # Tenancy isolation guard, security, DB engine
+│   ├── config.py             # Pydantic configuration & env settings
+│   ├── database.py           # SQLAlchemy sessionmaker & connection pool
+│   └── models.py             # Central registry of all 18 domain models
+├── data/
+│   ├── migrations/           # Alembic schema versioning scripts
+│   ├── seeders/              # FSSAI regulations, demo tenant, & seed scripts
+│   ├── raw_data/             # Statutory acts, notifications, sample labels
+│   ├── processed/            # Extracted clauses and vector embeddings
+│   └── datasets/             # Training datasets for recall prediction ML
+├── docs/
+│   ├── architecture/         # System architecture, data dictionary, UX wireframes
+│   └── requirements/         # Spec clarifications & open questions register
+├── frontend/                 # React / Next.js TypeScript application
+│   ├── components/           # Reusable UI components
+│   ├── pages/                # Application views & dashboards
+│   ├── hooks/                # Custom React state hooks
+│   └── services/             # API client services
+├── infrastructure/
+│   ├── docker/               # Backend and frontend container images
+│   ├── terraform/            # Cloud infrastructure as code
+│   └── k8s/                  # Kubernetes deployment manifests
+└── tests/
+    ├── unit/                 # Unit tests (models, tenancy guard, seeders)
+    ├── integration/          # Migration & database integration tests
+    ├── e2e/                  # End-to-end user journey tests
+    └── security/             # Penetration and tenant isolation tests
 ```
 
 ---
 
-## 🚀 Quick Start Guide
+## 4. Local Development Quickstart
 
 ### Prerequisites
-SafeFood AI is built with zero runtime dependencies. All you need is a modern web browser (Google Chrome or Microsoft Edge recommended for full Web Speech API compatibility).
+- Docker & Docker Compose (or standalone Postgres 16 with pgvector)
+- Python 3.12+ (or `uv` package manager)
+- Node.js 18+
 
-### Running Locally
+### Step 1: Start Local Infrastructure
+Run the containerized stack (PostgreSQL with pgvector, Redis, MinIO, and OpenSearch):
+```bash
+docker-compose up -d
+```
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/naveen-kumar-agraharam/AI-FSR.git
-   cd AI-FSR
-   ```
+### Step 2: Set Up Python Virtual Environment
+```bash
+# Using uv (fastest):
+uv venv .venv
+uv pip install -r requirements.txt
 
-2. **Launch the application:**
-   * **Option A: Direct Browser Opening**
-     Simply double-click `index.html` or open it with any web browser.
+# Or standard python venv:
+python -m venv .venv
+# On Windows:
+.venv\Scripts\activate
+# On Linux/macOS:
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-   * **Option B: Using VS Code Live Server**
-     Right-click `index.html` in VS Code and select **"Open with Live Server"**.
+### Step 3: Run Database Migrations
+Initialize all 18 core tables and PostgreSQL extensions:
+```bash
+alembic upgrade head
+```
 
-   * **Option C: Using Python HTTP Server**
-     ```bash
-     python -m http.server 3000
-     ```
-     Then open `http://localhost:3000` in your browser.
+### Step 4: Seed Initial FSSAI Regulations & Demo Tenant
+Populate statutory regulations (Schedule 4 hygiene standards, Licensing regulations, Labelling standards), demo organization (`Apex Foods Ltd`), and test accounts:
+```bash
+python -m data.seeders.seed_data
+```
 
-   * **Option D: Using Node.js `npx serve`**
-     ```bash
-     npx serve .
-     ```
-
----
-
-## 🌐 Deploying to Render
-
-You can deploy SafeFood AI on [Render](https://render.com) for free in two ways:
-
-### Option 1: Static Site (Recommended & 100% Free)
-1. In Render Dashboard, click **New +** -> **Static Site**.
-2. Connect your GitHub repository: `https://github.com/naveen-kumar-agraharam/AI-FSR`.
-3. Configure the settings:
-   - **Name**: `safefood-ai` (or your preferred name)
-   - **Branch**: `main`
-   - **Build Command**: *(Leave empty)*
-   - **Publish Directory**: `.`
-4. Click **Create Static Site**.
-
-*(Note: The included `render.yaml` automatically sets up the static rewrite rules.)*
-
-### Option 2: Web Service (Node.js)
-If deploying as a Web Service:
-- **Build Command**: `npm install` (or leave empty)
-- **Start Command**: `node server.js`
-- Render will automatically bind to `PORT` and serve the platform.
+### Step 5: Run Automated Verification Suite
+Run unit tests, tenant isolation checks, and migration tests:
+```bash
+pytest tests/ -v
+```
 
 ---
 
-## 💡 Usage Highlights
+## 5. Security & Multi-Tenancy Architecture
 
-1. **Navigating Modules**: Use the left sidebar to navigate between **Overview**, **Regulatory Assistant**, **Document Intelligence**, **Label Validator**, **Recall Prediction**, and **Voice Agent**.
-2. **Interactive Regulatory Chat**: Click on any of the suggested prompt chips or type your own question to receive tailored FSSAI compliance answers.
-3. **Running a Label Audit**: Switch to the **Label Validator** tab, select a sample food product or paste nutritional information, and click **Validate Label** to view the compliance score and flagged violations.
-4. **Hands-free Voice Agent**: Open the **Voice Agent** tab, pick your preferred language (English, Hindi, or Tamil), click the microphone button, and speak your compliance query.
+Every query executed against tenant-isolated tables (`products`, `suppliers`, `batches`, `documents`, `audits`, `capa_actions`, `recall_events`, etc.) is intercepted by the query-level Tenancy Guard in `backend/utils/tenancy.py`. 
 
----
-
-## 🔒 Security & Privacy
-
-* SafeFood AI operates directly in the browser environment without transmitting proprietary recipes or facility blueprints to external untrusted servers.
-* Web Speech API requests rely on standard browser speech services.
+1. **Automatic Tenant Scoping**: When an authenticated tenant session is active, queries are automatically filtered by `organization_id == current_tenant_id`.
+2. **Fail-Loud Protection**: If a developer or background worker queries a tenant-isolated entity without an active tenant context, the guard raises `MissingTenantFilterError` loudly in test environments, preventing silent cross-tenant data leaks.
+3. **Admin Bypass**: Platform-wide jobs (e.g. Alembic migrations and database seeders) execute safely within `TenantBypassScope()`.
 
 ---
 
-## 🤝 Contributing
+## 6. 12-Week MVP Delivery Plan
 
-Contributions, issues, and feature requests are welcome!
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
-
-## 📜 License
-
-Distributed under the MIT License. See `LICENSE` for more information.
-
----
-
-*Developed with passion for food safety and regulatory compliance.*
+| Week | Milestone Deliverable | Status |
+|---|---|---|
+| **Week 1** | Architecture, UX wireframes, DB schema + migrations | **Completed** |
+| **Week 2** | Authentication + RBAC (JWT, 9 roles, MFA) | **Completed** |
+| **Week 3** | Organization / site / user multi-tenant management | **Completed** |
+| **Week 4** | Regulatory knowledge ingestion (FSSAI documents → clauses → pgvector embeddings) | **Completed** |
+| **Week 5** | RAG + Regulatory Assistant (`POST /compliance/query`) | **Completed** |
+| **Week 6** | Document Intelligence (SOP/HACCP analysis + gap detection) | **Completed** |
+| **Week 7** | Label Validator (FSSAI 2020 deterministic rule engine) | **Completed** |
+| **Week 8** | Audit Management (checklist → findings → CAPA verification) | **Completed** |
+| **Week 9** | Supplier + Batch Management (health index & status state machine) | **Completed** |
+| **Week 10**| Recall Prediction Engine (ML probability + SHAP feature attribution) | **Completed** |
+| **Week 11**| Dashboard + Reports (executive aggregated metrics) | **Completed** |
+| **Week 12**| Security hardening + AI Guardrails + Trilingual Voice Copilot + Deployment | **Completed** |

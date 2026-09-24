@@ -275,6 +275,15 @@ COMMUNICATION STYLE AND FORMATTING RULES:
 
 const FSSAI_CHECKLIST_PROMPT = `You are an expert FSSAI food safety auditor in India with in-depth knowledge of Schedule 4 sanitary and hygiene requirements.`;
 
+const FSSAI_VOICE_PROMPT = `You are SafeFood AI Voice Agent, an expert food safety and FSSAI compliance assistant for factory floor auditors, food handlers, and plant managers in India.
+The user is speaking to you via voice. Your answer will be read aloud via Text-to-Speech.
+
+VOICE OUTPUT RULES:
+1. Provide a concise, clear, and direct answer in 2 to 3 sentences maximum.
+2. Absolutely DO NOT use markdown, bullet points, asterisks (* or **), section headers, URLs, or citations.
+3. Keep the tone natural, conversational, reassuring, and easy to understand when heard through headphones or speakers.
+4. Respond in the user's requested language. If the language requested is Hindi (hi-IN), respond in clear Hindi (Devanagari script). If Tamil (ta-IN), respond in clear Tamil. If English (en-IN), respond in clear Indian-context English.`;
+
 const GEMINI_MODELS = ['gemini-3.6-flash', 'gemini-2.5-flash'];
 
 async function callGemini(contents) {
@@ -329,6 +338,137 @@ async function handleRegulatoryChat(req, res) {
     // Intent-based compliance response
     const reply = cleanChatResponse(getFSSAIAnswer(query));
     sendJSON(res, 200, { reply, source: 'intent' });
+}
+
+// -------------------------------------------------------
+// Multilingual Voice Intent Engine & Handler
+// -------------------------------------------------------
+function getMultilingualVoiceAnswer(query, lang = 'en-IN') {
+    const q = (query || '').toLowerCase().trim();
+    const l = (lang || 'en-IN').toLowerCase();
+
+    // Hindi responses
+    if (l.startsWith('hi')) {
+        if (q.includes('नमस्ते') || q.includes('हेलो') || q.includes('हाय') || q.includes('hello') || q.includes('hi')) {
+            return 'नमस्ते! सेफफूड वॉयस असिस्टेंट तैयार है। आप खाद्य सुरक्षा, स्वच्छता या एफएसएसएआई नियमों के बारे में पूछ सकते हैं।';
+        }
+        if (q.includes('डेयरी') || q.includes('दूध') || q.includes('मिल्क') || q.includes('शेल्फ') || q.includes('dairy') || q.includes('milk') || q.includes('shelf')) {
+            return 'एफएसएसएआई के अनुसार पास्चुरीकृत दूध को 4 डिग्री सेल्सियस से नीचे रखें। इसकी शेल्फ लाइफ 2 से 3 दिन की होती है।';
+        }
+        if (q.includes('शाकाहारी') || q.includes('हलाल') || q.includes('लोगो') || q.includes('निशान') || q.includes('मार्क') || q.includes('organic') || q.includes('jaivik')) {
+            return 'शाकाहारी भोजन पर हरे रंग का चौकोर निशान और जैविक खाद्य पदार्थों पर जैविक भारत लोगो होना अनिवार्य है।';
+        }
+        if (q.includes('स्वच्छता') || q.includes('सफाई') || q.includes('hygiene') || q.includes('रसोई') || q.includes('kitchen')) {
+            return 'शेड्यूल 4 के अनुसार रसोई को रोगाणुमुक्त रखें, पीने योग्य पानी का उपयोग करें और सभी कर्मी हेयरनेट और एप्रन पहनें।';
+        }
+        if (q.includes('लाइसेंस') || q.includes('लायसेंस') || q.includes('रजिस्ट्रेशन') || q.includes('license')) {
+            return '12 लाख तक के कारोबार पर बेसिक रजिस्ट्रेशन, 12 लाख से 20 करोड़ तक स्टेट लाइसेंस और 20 करोड़ से अधिक पर सेंट्रल लाइसेंस अनिवार्य है।';
+        }
+        if (q.includes('बैक्टीरिया') || q.includes('जीवाणु') || q.includes('संक्रमण') || q.includes('bacteria') || q.includes('कार्रवाई')) {
+            return 'जीवाणु संक्रमण पाए जाने पर बैच को तुरंत अलग करें, सतहों को सैनिटाइज करें और तापमान लॉग की दोबारा जांच करें।';
+        }
+        if (q.includes('ऑडिट') || q.includes('जांच') || q.includes('निरीक्षण') || q.includes('audit')) {
+            return 'ऑडिट के लिए अपना एफएसएसएआई लाइसेंस, पानी की टेस्ट रिपोर्ट, पेस्ट कंट्रोल रिकॉर्ड और कर्मचारियों के स्वास्थ्य प्रमाण पत्र तैयार रखें।';
+        }
+        return 'मुझे आपका निर्देश मिल गया है। खाद्य सुरक्षा नियमों का पालन करें, साफ-सफाई बनाए रखें और दैनिक स्वच्छता लॉग दर्ज करें।';
+    }
+
+    // Tamil responses
+    if (l.startsWith('ta')) {
+        if (q.includes('வணக்கம்') || q.includes('hello') || q.includes('hi')) {
+            return 'வணக்கம்! உணவு பாதுகாப்பு குரல் உதவியாளர் தயார். உங்கள் சந்தேகங்களைக் கேட்கலாம்.';
+        }
+        if (q.includes('உரிமம்') || q.includes('license') || q.includes('லைசென்ஸ்')) {
+            return 'வருடாந்திர விற்றுமுதல் 12 லட்சம் வரை பதிவுச் சான்றிதழும், 12 லட்சம் முதல் 20 கோடி வரை மாநில உரிமமும், அதற்கு மேல் மத்திய உரிமமும் தேவை.';
+        }
+        if (q.includes('பால்') || q.includes('milk') || q.includes('dairy') || q.includes('நாட்கள்') || q.includes('shelf')) {
+            return 'பாஸ்சுரைஸ் செய்த பாலை 4 டிகிரி செல்சியஸிற்கு கீழ் குளிர்பதனத்தில் வைக்க வேண்டும். இது 2 முதல் 3 நாட்கள் வரை கெடாமல் இருக்கும்.';
+        }
+        if (q.includes('லேபிள்') || q.includes('விதிகள்') || q.includes('label') || q.includes('லோகோ')) {
+            return 'உணவு லேபிள்களில் தயாரிப்பாளர் முகவரி, காலாவதி தேதி, ஊட்டச்சத்து விவரங்கள், சைவ/அசைவ குறியீடு மற்றும் எஃப்.எஸ்.எஸ்.ஏ.ஐ எண் கட்டாயம் இருக்க வேண்டும்.';
+        }
+        if (q.includes('சுகாதாரம்') || q.includes('சுத்தம்') || q.includes('hygiene') || q.includes('விதி')) {
+            return 'சமையலறை மற்றும் பாத்திரங்களை தூய்மையாக வைக்கவும். குடிநீர் பரிசோதனை அறிக்கைகள் மற்றும் ஊழியர்களின் சுகாதார சான்றிதழ்கள் அவசியம்.';
+        }
+        if (q.includes('பாக்டீரியா') || q.includes('bacteria') || q.includes('நடவடிக்கை')) {
+            return 'பாக்டீரியா தொற்று உள்ள உணவுப் பொருட்களை உடனடியாக தனிமைப்படுத்தி, கருவிகளை கிருமிநாசினி கொண்டு தூய்மைப்படுத்த வேண்டும்.';
+        }
+        return 'உங்கள் குரல் கட்டளை பெறப்பட்டது. எஃப்.எஸ்.எஸ்.ஏ.ஐ உணவு பாதுகாப்பு மற்றும் சுகாதார விதிமுறைகளை கவனமாக பின்பற்றுங்கள்.';
+    }
+
+    // English responses (en-IN / default)
+    if (isGreeting(q)) {
+        return 'Hello! SafeFood voice agent is listening. Ask any food safety or FSSAI regulation question.';
+    }
+    if (q.includes('dairy') || q.includes('milk') || q.includes('shelf life') || q.includes('curd') || q.includes('cheese')) {
+        return 'Under FSSAI rules, pasteurized milk must be kept refrigerated below 4°C and used within 2 to 3 days. UHT milk in sealed aseptic packs lasts up to 90 days at room temperature.';
+    }
+    if (q.includes('hygiene') || q.includes('restaurant') || q.includes('kitchen') || q.includes('sanitary') || q.includes('cleanliness')) {
+        return 'Under FSSAI Schedule 4, food facilities must sanitize contact surfaces, use tested potable water, mandate staff aprons and hairnets, and segregate raw from cooked items.';
+    }
+    if (q.includes('organic') || q.includes('jaivik') || q.includes('logo')) {
+        return 'Certified organic food packages must display the Jaivik Bharat symbol alongside the 14-digit FSSAI license number and certification details.';
+    }
+    if (q.includes('bacteria') || q.includes('corrective action') || q.includes('contamination') || q.includes('e. coli') || q.includes('salmonella')) {
+        return 'Immediately quarantine the affected batch, sanitize equipment with approved quaternary ammonium solution, and verify heating and pasteurization temperature logs.';
+    }
+    if (q.includes('license') || q.includes('registration') || q.includes('turnover') || q.includes('central') || q.includes('state')) {
+        return 'Basic Registration applies up to ₹12 Lakhs annual turnover. State License covers ₹12 Lakhs to ₹20 Crores, and Central License is required above ₹20 Crores or for interstate businesses.';
+    }
+    if (q.includes('temperature') || q.includes('storage') || q.includes('cold') || q.includes('frozen')) {
+        return 'Maintain refrigerated foods strictly below 4°C, hot held foods above 65°C, and frozen storage at or below minus 18°C with calibrated daily temperature logging.';
+    }
+    if (q.includes('audit') || q.includes('inspection') || q.includes('prepare')) {
+        return 'Have your displayed FSSAI license, water potability test records, pest control logs, and FoSTaC supervisor certifications ready for inspection.';
+    }
+    if (q.includes('label') || q.includes('packaging') || q.includes('allergen') || q.includes('ingredient')) {
+        return 'All packaged foods must display the 14-digit license, veg or non-veg dot, manufacturing date, net weight, nutritional facts, and explicit allergen declarations.';
+    }
+    if (q.includes('recall') || q.includes('unsafe') || q.includes('adulterat')) {
+        return 'Stop distribution immediately, notify FSSAI authorities within 24 hours, recall product batches from shelves, and initiate consumer safety advisories.';
+    }
+    return 'Under FSSAI standards, verify standard operating procedures, ensure clean potable water, and maintain daily Schedule 4 inspection logs.';
+}
+
+/** POST /api/voice-chat  { query: string, lang?: string } → { reply: string, lang: string, source: string } */
+async function handleVoiceChat(req, res) {
+    let body;
+    try { body = await readBody(req); }
+    catch (e) { return sendJSON(res, 400, { error: 'Invalid request body' }); }
+
+    const query = (body.query || '').trim();
+    const lang = (body.lang || 'en-IN').trim();
+    if (!query) return sendJSON(res, 400, { error: 'Query is required' });
+
+    // Identify target language description for Gemini
+    const langNames = {
+        'hi-IN': 'Hindi (Devanagari script)',
+        'ta-IN': 'Tamil script',
+        'en-IN': 'English (Indian context)'
+    };
+    const targetLangDesc = langNames[lang] || 'English (Indian context)';
+
+    // If Gemini is active, use it for voice
+    if (genAI) {
+        const prompt = `${FSSAI_VOICE_PROMPT}
+
+Target response language: ${targetLangDesc}
+Auditor spoken question: "${query}"
+
+Respond now in 2-3 short, spoken sentences in ${targetLangDesc}:`;
+
+        const reply = await callGemini([{ text: prompt }]);
+        if (reply) {
+            const cleanedReply = cleanChatResponse(reply);
+            if (cleanedReply && cleanedReply.length > 5) {
+                return sendJSON(res, 200, { reply: cleanedReply, lang, source: 'ai' });
+            }
+        }
+    }
+
+    // Fallback: Multilingual intent engine
+    const reply = cleanChatResponse(getMultilingualVoiceAnswer(query, lang));
+    return sendJSON(res, 200, { reply, lang, source: 'intent' });
 }
 
 /** POST /api/generate-checklist  { businessType: string } → { items: [{id, text, clause}] } */
@@ -770,6 +910,9 @@ const server = http.createServer((req, res) => {
     // ---- API Routes ----
     if (req.method === 'POST' && urlPath === '/api/regulatory-chat') {
         return handleRegulatoryChat(req, res);
+    }
+    if (req.method === 'POST' && urlPath === '/api/voice-chat') {
+        return handleVoiceChat(req, res);
     }
     if (req.method === 'POST' && urlPath === '/api/generate-checklist') {
         return handleGenerateChecklist(req, res);

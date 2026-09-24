@@ -1,0 +1,80 @@
+[
+  {
+    "authority": "FSSAI",
+    "title": "Food Safety and Standards (Licensing and Registration of Food Businesses) Regulations, 2011",
+    "document_type": "Regulation",
+    "version": "2024.1",
+    "publication_date": "2011-08-05",
+    "effective_date": "2011-08-05",
+    "source_url": "https://www.fssai.gov.in/upload/uploadfiles/files/Licensing_Regulations.pdf",
+    "clauses": [
+      {
+        "section": "Chapter 2",
+        "clause": "Regulation 2.1.1",
+        "heading": "Registration of Petty Food Business",
+        "content": "Every petty food manufacturer shall register with the Registering Authority by submitting an application along with a fee as specified in Schedule 3. Petty food businesses include entities with annual turnover up to Rs. 12 Lakhs.",
+        "page_number": 6
+      },
+      {
+        "section": "Chapter 2",
+        "clause": "Regulation 2.1.2",
+        "heading": "Licensing for Food Businesses",
+        "content": "No person shall commence any food business without obtaining an active license under these regulations. Food businesses with annual turnover exceeding Rs. 12 Lakhs and up to Rs. 20 Crores require a State License; businesses operating in multiple states or exceeding Rs. 20 Crores require a Central License.",
+        "page_number": 8
+      },
+      {
+        "section": "Schedule 4",
+        "clause": "Schedule 4 - Part 2 Clause 1",
+        "heading": "Location and Surroundings of Food Processing Facilities",
+        "content": "Food establishment shall ideally be located away from environmentally polluted areas and industrial activities that produce objectionable odors, fumes, dust, and other contaminants. Grounds within the site shall be properly paved and drained to avoid stagnant water.",
+        "page_number": 24
+      },
+      {
+        "section": "Schedule 4",
+        "clause": "Schedule 4 - Part 2 Clause 4.2",
+        "heading": "Water Supply and Potable Standards",
+        "content": "Only potable water conforming to IS 10500 standards shall be used in food handling, cooking, ice manufacture, and equipment cleaning. Water storage tanks must be cleaned and disinfected periodically and certified by accredited lab testing at least semi-annually.",
+        "page_number": 28
+      },
+      {
+        "section": "Schedule 4",
+        "clause": "Schedule 4 - Part 3 Clause 2",
+        "heading": "Specific Hygiene for Dairy and Milk Processing",
+        "content": "Raw milk collection and reception shall maintain cold-chain storage at or below 4 degrees Celsius. Pasteurization equipment must feature automated temperature logging, continuous flow diversion valves, and CIP (Clean-In-Place) sanitation cycles.",
+        "page_number": 42
+      },
+      {
+        "section": "Schedule 4",
+        "clause": "Schedule 4 - Part 5 Clause 3",
+        "heading": "Catering and Food Service Temperature Controls",
+        "content": "High-risk perishable cooked food items shall be hot-held above 60 degrees Celsius or chilled rapidly to below 5 degrees Celsius within two hours of preparation. Food handlers must possess active FoSTaC certification and undergo annual medical health fitness examinations.",
+        "page_number": 58
+      }
+    ]
+  },
+  {
+    "authority": "FSSAI",
+    "title": "Food Safety and Standards (Packaging and Labelling) Regulations, 2020",
+    "document_type": "Regulation",
+    "version": "2020.2",
+    "publication_date": "2020-11-17",
+    "effective_date": "2021-07-01",
+    "source_url": "https://www.fssai.gov.in/upload/uploadfiles/files/Packaging_Labelling_Regulations.pdf",
+    "clauses": [
+      {
+        "section": "Chapter 2",
+        "clause": "Regulation 5(1)",
+        "heading": "Mandatory Declarations on Pre-packaged Food Labels",
+        "content": "Every pre-packaged food label must distinctly declare: (1) Name of the food, (2) List of ingredients in descending order of weight or volume, (3) Nutritional information per 100g or per serving, (4) Declaration of Veg/Non-Veg logo (green circle or brown triangle), (5) Net quantity, (6) Lot/Code/Batch identification, (7) Date of manufacture and Expiry/Use-by date, and (8) Complete FSSAI logo along with the 14-digit license number.",
+        "page_number": 12
+      },
+      {
+        "section": "Chapter 2",
+        "clause": "Regulation 5(3)",
+        "heading": "Mandatory Allergen Declarations",
+        "content": "Food allergens including cereals containing gluten, crustaceans, eggs, fish, peanuts and tree nuts, soybeans, milk and milk products, and sulphite in concentrations of 10mg/kg or more must be explicitly declared on the label with allergen warnings (e.g. 'Contains: Milk, Gluten').",
+        "page_number": 16
+      }
+    ]
+  }
+]
